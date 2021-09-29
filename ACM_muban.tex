@@ -224,14 +224,15 @@ int main(){
 #include<bits/stdc++.h>
 cout<<"hello<<endl;
 \end{lstlisting}
-\section{数学}
+
+\section{数论}
+
 \subsection{欧拉筛}
 $O(n)$筛素数
 \begin{lstlisting}
 int primes[maxn+5],tail;
 bool is_prime[maxn+5];
-void euler()
-{
+void euler(){
    is_prime[1] = 1;
    for (int i = 2; i < maxn; i++)
    {
@@ -246,6 +247,7 @@ void euler()
    }
 }
 \end{lstlisting}
+
 \subsection{Exgcd}
 求出$ax+by=gcd(a,b)$的一组可行解 $O(logn)$ 
 \begin{lstlisting}
@@ -254,6 +256,7 @@ void Exgcd(ll a,ll b,ll &d,ll &x,ll &y){
 	else{Exgcd(b,a%b,d,y,x);y-=x*(a/b);}
 }
 \end{lstlisting}
+
 \subsection{Excrt 扩展中国剩余定理}
 求解同余方程组
 $\begin{cases}
@@ -265,8 +268,7 @@ $\begin{cases}
 	\end{aligned}
 \end{cases}$
 \begin{lstlisting}
-int excrt(int a[],int b[],int n)
-{
+int excrt(int a[],int b[],int n){
     int lc=1;
     for(int i=1;i<=n;i++)
         lc=lcm(lc,a[i]);
@@ -280,6 +282,110 @@ int excrt(int a[],int b[],int n)
         a[i+1]=lcm(a[i],a[i+1]);
     }
     return (b[n]%lc+lc)%lc;
+}
+\end{lstlisting}
+
+\subsection{线性求逆元}
+\begin{lstlisting}
+void init(int p){
+	inv[1] = 1;
+	for(int i=2;i<=n;i++){
+		inv[i] = (ll)(p-p/i)*inv[p%i]%p;
+	}
+}
+\end{lstlisting}
+
+\subsection{组合数}
+预处理阶乘，并通过逆元实现相除
+\begin{lstlisting}
+ll jc[MAXN];
+ll qpow(ll d,ll c){//快速幂
+    ll res = 1;
+    while(c){
+        if(c&1) res=res*d%med;
+        d=d*d%med;c>>=1;
+    }return res;
+}
+inline ll niyuan(ll x){return qpow(x,med-2);}
+void initjc(){//初始化阶乘
+    jc[0] = 1;
+    rep(i,1,MAXN-1) jc[i] = jc[i-1]*i%med;
+}
+inline int C(int n,int m){//n是下面的
+    if(n<m) return 0;
+    return jc[n]*niyuan(jc[n-m])%med*niyuan(jc[m])%med;
+}
+int main(){
+    initjc();
+    int n,m;
+    while(cin>>n>>m) cout<<C(n,m)<<endl;
+}
+\end{lstlisting}
+
+\subsection{矩阵快速幂}
+\begin{lstlisting}
+struct Matrix{
+	ll a[MAXN][MAXN];
+	
+	Matrix(ll x=0){//感觉是特别好的初始化,从hjt那里学(抄)来的 
+		for(int i=0;i<n;i++){
+			for(int j=0;j<n;j++){
+				a[i][j]=x*(i==j);//这句特简洁		
+			}
+		}
+	}
+	
+	Matrix operator *(const Matrix &b)const{//通过重载运算符实现矩阵乘法 
+		Matrix res(0);
+		for(int i=0;i<n;i++){
+			for(int j=0;j<n;j++){
+				for(int k=0;k<n;k++){
+					ll &ma = res.a[i][j];
+					ma = (ma+a[i][k]*b.a[k][j])%mod;
+				}
+			}
+		}
+		return res;
+	}
+};
+
+Matrix qpow(Matrix d,ll m){//底数和幂次数 
+	Matrix res(1);//构造E单位矩阵 
+	while(m){
+		if(m&1){
+			m--;//其实这句是可以不要的 
+			res=res*d;
+		}
+		d=d*d;
+		m>>=1;
+	}
+	return res; 
+}
+\end{lstlisting}
+
+\subsection{高斯消元}
+\begin{lstlisting}
+待补充
+\end{lstlisting}
+
+\subsection{三点求圆心}
+\begin{lstlisting}
+struct point{
+	double x;
+	double y;
+};
+
+point cal(point a,point b,point c){
+	double x1 = a.x;double y1 = a.y;
+	double x2 = b.x;double y2 = b.y;
+	double x3 = c.x; double y3 = c.y;
+	double a1 = 2*(x2-x1); double a2 = 2*(x3-x2);
+	double b1 = 2*(y2-y1); double b2 = 2*(y3-y2);
+	double c1 = x2*x2 + y2*y2 - x1*x1 - y1*y1;
+	double c2 = x3*x3 + y3*y3 - x2*x2 - y2*y2;
+	double rx = (c1*b2-c2*b1)/(a1*b2-a2*b1);
+	double ry = (c2*a1-c1*a2)/(a1*b2-a2*b1);
+	return point{rx,ry};
 }
 \end{lstlisting}
 %==============================正文部分==============================%
