@@ -388,5 +388,126 @@ point cal(point a,point b,point c){
 	return point{rx,ry};
 }
 \end{lstlisting}
+
+\subsection{欧拉降幂}
+$$
+a^b \equiv \begin{cases}
+a^{b\%\phi(p)} , & \gcd(a,p)=1\\
+a^b , & \gcd(a,p)\neq 1,b<\phi(p)\\
+a^{b\%\phi(p)+\phi(p)} , & \gcd(a,p)\neq 1 , b\geq \phi(p)\\
+\end{cases}
+(\mod p)
+$$
+
+\section{字符串}
+
+\subsection{FFT解决字符串匹配问题}
+可以用来解决含有通配符的字符串匹配问题
+定义匹配函数 $$(x,y) = (A_x-B_x)^2$$
+如果两个字符相同，则满足 $C(x,y)=0$\\
+定义模式串和文本串x位置对齐时候的完全匹配函数为
+$$P(x)=\sum C(i,x+i)$$
+模式串在位置x上匹配时,$p(x)=0$\\
+通过将模式串reverse后卷积，可以快速处理每个位置x上的完全匹配函数$P(x)$
+同理，如果包含通配符，则设通配符的值为0，可以构造损失函数
+$$C(x,y)=(A_x-B_x)^2 \cdot A_x \cdot B_x=A_x^3 B_x+A_xB_x^3-2A_x^2B_x^2$$
+通过三次FFT即可求得每个位置上的P(x)
+
+\subsection{后缀数组SA+LCP}
+LCP(i,j) 后缀i和后缀j的最长公共前缀
+\begin{lstlisting}
+int n,m;
+string s;
+int rk[MAXN],sa[MAXN],c[MAXN],rk2[MAXN];
+//sa[i]存排名i的原始编号 rk[i]存编号i的排名 第二关键字rk2
+inline void get_SA(){
+    rep(i,1,n) ++c[rk[i]=s[i]];//基数排序
+    rep(i,2,m) c[i] += c[i-1];
+    //c做前缀和，可以知道每个关键字的排名最低在哪里
+    repb(i,n,1) sa[c[rk[i]]--] = i;//记录每个排名的原编号
+
+    for(int w=1;w<=n;w<<=1){//倍增
+        int num = 0;
+        rep(i,n-w+1,n) rk2[++num] = i;//没有第二关键字的排在前面
+        rep(i,1,n) if(sa[i]>w) rk2[++num] = sa[i]-w;
+        //编号sa[i]大于w的才能作为编号sa[i]-w的第二关键字
+        rep(i,1,m) c[i] = 0;
+        rep(i,1,n) ++c[rk[i]];
+        rep(i,2,m) c[i]+=c[i-1];
+        repb(i,n,1) sa[c[rk[rk2[i]]]--]=rk2[i],rk2[i]=0;
+        //同一个桶中按照第二关键字排序
+        swap(rk,rk2);
+        //这时候的rk2时这次排序用到的上一轮的rk,要计算出新的rk给下一轮排序
+
+        rk[sa[1]]=1,num=1;
+        rep(i,2,n)
+            rk[sa[i]] = (rk2[sa[i]]==rk2[sa[i-1]]&&rk2[sa[i]+w]==rk2[sa[i-1]+w])?num:++num;
+        //下一次排名的第一关键字,相同的两个元素排名也相同
+        if(num==n) break;//rk都唯一时，排序结束
+        m=num;
+    }
+}
+int height[MAXN];
+inline void get_height(){
+    int k = 0,j;
+    rep(i,1,n) rk[sa[i]] = i;
+    rep(i,1,n){
+        if(rk[i]==1) continue;//第一名往前没有前缀
+        if(k) k--;//h[i]>=h[i-1]-1 即height[rk[i]]>=height[rk[i-1]]-1
+        j = sa[rk[i]-1];//找排在rk[i]前面的
+        while(j+k<=n&&i+k<=n&&s[i+k]==s[j+k]) ++k;//逐字符比较
+        //因为每次k只会-1，故++k最多只会加2n次
+        height[rk[i]] = k;
+    }
+}
+inline void solve(){
+    cin>>s;
+    s = ' '+s;
+    n = s.size()-1,m = 122;//m为字符个数'z'=122
+    get_SA();
+    rep(i,1,n) cout<<sa[i]<<' ';
+    cout<<endl;
+}
+\end{lstlisting}
+
+\section{STL等小技巧}
+
+\subsection{集合set}
+还可以通过lower\_bound和upper\_bound返回迭代器来找前驱,后继
+\begin{lstlisting}
+//并交集
+vector<int> ANS;
+set_union(s1.begin(),s1.end(),s2.begin(),s2.end(),inserter(ANS,ANS.begin()));//set_intersection()
+
+//通过迭代器遍历集合
+set<char>::iterator iter = temp1.begin();
+while (iter!=temp1.end()){
+	cout<<*iter;
+	iter++;
+}
+\end{lstlisting}
+
+\subsection{快读快写(短)}
+\begin{lstlisting}
+template<class T>inline void read(T &x){x=0;char o,f=1;while(o=getchar(),o<48)if(o==45)f=-f;do x=(x<<3)+(x<<1)+(o^48);while(o=getchar(),o>47);x*=f;}
+template<class T>
+void wt(T x){//快写
+   if(x < 0) putchar('-'), x = -x;
+   if(x >= 10) wt(x / 10);
+   putchar('0' + x % 10);
+}
+\end{lstlisting}
+
+\subsection{GCD(压行)}
+\begin{lstlisting}
+ll gcd(ll a,ll b){ while(b^=a^=b^=a%=b); return a; }
+\end{lstlisting}
+
+\subsection{计时}
+\begin{lstlisting}
+inline double run_time(){
+    return 1.0*clock()/CLOCKS_PER_SEC;
+}
+\end{lstlisting}
 %==============================正文部分==============================%
 \end{document}
