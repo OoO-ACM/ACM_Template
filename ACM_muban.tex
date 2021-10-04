@@ -225,6 +225,85 @@ int main(){
 cout<<"hello<<endl;
 \end{lstlisting}
 
+\section{数据结构}
+
+\subsection{扫描线}
+扫描线是离散化后，使用类似权值线段树来维护每个截面上的线段长度。\\
+通过把二维平面上的四边形拆分成入边和出边两段，在遇到边的时候对对应的区间进行区间加/减即可。\\
+每个节点上需要维护被完全覆盖的次数和实际长度。
+\begin{lstlisting}
+#define ls (x<<1)
+#define rs (x<<1|1)//这种方法感觉还挺好的
+
+int cansel_sync=(ios::sync_with_stdio(0),cin.tie(0),0);
+const int MAXN = 2e5+5;//这里要开n的两倍
+//线结构体
+struct Line{
+    ll l,r,h;
+    int qz;//记录位置和权值
+    bool operator < (Line &rhs){
+        return h < rhs.h;
+    }
+}line[MAXN];
+int n;
+ll x1,y1,x2,y2;
+ll X[MAXN];
+//线段树
+struct Segt{
+    int l,r;//是X的下标,即离散化后的
+    int sum;//sum是被完全覆盖的次数
+    ll len;//len是区间内被盖住的长度
+    //因为每次查询都是查询根节点,所以这边不需要懒惰标记
+}t[MAXN<<3];//一个边有两个点,所以这里要开8倍
+void build(int x,int l,int r){
+    t[x].l = l;t[x].r = r;
+    t[x].len = t[x].sum = 0;
+    if(l==r) return;//到了叶子节点
+    int mid = (l+r)>>1;
+    build(ls,l,mid);
+    build(rs,mid+1,r);
+}
+void push_up(int x){
+    int l = t[x].l,r = t[x].r;
+    if(t[x].sum) t[x].len = X[r+1]-X[l];//x的区间是X[l]到X[r+1]-1
+    else t[x].len = t[ls].len + t[rs].len;//合并儿子的信息
+}
+void update(int x,int L,int R,int v){//这里的LR存的是实际值
+    //这里如果是线段L,R,线段树上是L到R-1的部分维护
+    int l = t[x].l,r = t[x].r;
+    if(X[r+1]<=L||R<=X[l]) return;//加等于,不然会搞到无辜的线
+    if(L<=X[l]&&X[r+1]<=R){
+        t[x].sum += v;//修改覆盖次数
+        push_up(x);
+        return;
+    }
+    update(ls,L,R,v);
+    update(rs,L,R,v);
+    push_up(x);
+}
+int main(){
+    cin>>n;
+    rep(i,1,n){
+        cin>>x1>>y1>>x2>>y2;
+        X[2*i-1] = x1,X[2*i] = x2;//一会儿离散化要用的,这里存实际值
+        line[2*i-1] = Line{x1,x2,y1,1};//开始的线
+        line[2*i] = Line{x1,x2,y2,-1};//结束的线
+    }
+    n<<=1;//line的数量是四边形数量的2倍
+    sort(line+1,line+1+n);
+    sort(X+1,X+1+n);
+    int tot = unique(X+1,X+n+1)-(X+1);//去除重复相邻元素,并且tot记录总数
+    build(1,1,tot-1);//为什么是tot-1?
+    //因为线段树只需要维护X[1]到X[tot]-1这一段的,实际长度是向右贴的
+    ll res = 0;
+    rep(i,1,n-1){//每次高度是line[i+1].h-line[i].h,所以是到n-1就行
+        update(1,line[i].l,line[i].r,line[i].qz);//扫描线加入线段树
+        res += t[1].len*(line[i+1].h-line[i].h);
+    }
+    cout<<res<<endl;
+}
+\end{lstlisting}
+
 \section{数论}
 
 \subsection{欧拉筛}
@@ -368,6 +447,18 @@ Matrix qpow(Matrix d,ll m){//底数和幂次数
 待补充
 \end{lstlisting}
 
+\subsection{欧拉降幂}
+$$
+a^b \equiv \begin{cases}
+a^{b\%\phi(p)} , & \gcd(a,p)=1\\
+a^b , & \gcd(a,p)\neq 1,b<\phi(p)\\
+a^{b\%\phi(p)+\phi(p)} , & \gcd(a,p)\neq 1 , b\geq \phi(p)\\
+\end{cases}
+(\mod p)
+$$
+
+\section{计算几何}
+
 \subsection{三点求圆心}
 \begin{lstlisting}
 struct point{
@@ -389,17 +480,111 @@ point cal(point a,point b,point c){
 }
 \end{lstlisting}
 
-\subsection{欧拉降幂}
-$$
-a^b \equiv \begin{cases}
-a^{b\%\phi(p)} , & \gcd(a,p)=1\\
-a^b , & \gcd(a,p)\neq 1,b<\phi(p)\\
-a^{b\%\phi(p)+\phi(p)} , & \gcd(a,p)\neq 1 , b\geq \phi(p)\\
-\end{cases}
-(\mod p)
-$$
-
 \section{字符串}
+
+\subsection{KMP}
+\begin{lstlisting}
+const int MAXN = 2e6+5;
+int pi[MAXN];//MAXN记得开大一点,因为这里要存到m+n+1长度的 
+vector<int> res;//储存答案
+ 
+void getpi(const string &s){ //求s的前缀函数
+	pi[0]=0;
+	int j=0;
+	rep(i,1,s.length()-1){
+		while(j>0&&s[i]!=s[j]) j=pi[j-1];//找到合适且最长的j 
+		if(s[i]==s[j])j++;//能成功匹配的情况 
+		pi[i]=j;
+	}
+}
+
+void kmp(string s,string t){ //在主串t中找模式串s 
+	getpi(s+'#'+t);
+	int n=(int)s.length(),m=(int)t.length();
+	rep(i,n+1,m+n+1-1)
+		if(pi[i]==n) res.push_back(i-2*s.size()); //i-2n计算得左端点 
+}
+\end{lstlisting}
+
+\subsection{AC自动机}
+\begin{lstlisting}
+const int MAXN = 1e5+5;
+int jdbh[MAXN];//记录第i个模式串对应的节点编号
+int cntcx[MAXN];//记录第i个模式串出现的次数
+inline int idx(char c){return c-'a';}
+struct Node{
+    int son[26],flag,fail;//cnt记录次数,flag记录编号
+    void clr(){
+        memset(son,0,sizeof(son));
+        flag=0;
+    }
+}trie[MAXN*10];
+int n,cntt;//cntt记录总点数
+string s,ms[166];
+int maxx;
+queue<int>q;
+inline void insert(string &s,int num){
+    int siz = s.size(),v,u=1;
+    rep(i,0,siz-1){
+        v = idx(s[i]);
+        if(!trie[u].son[v]){trie[u].son[v] = ++cntt;trie[cntt].clr();}
+        u = trie[u].son[v];
+    }
+    trie[u].flag = num;//标记为单词,flag记录编号
+    //保证每个模式串只出现一次
+    cntcx[num] = 0;
+    jdbh[num] = u;//记录当前单词对应的节点编号
+}
+inline void getfail(){
+    rep(i,0,25) trie[0].son[i] = 1;
+    trie[0].flag = 0;
+    q.push(1);
+    trie[1].fail = 0;
+    int u,v,ufail;
+    while(!q.empty()){
+        u = q.front();q.pop();
+        rep(i,0,25){
+            v = trie[u].son[i];
+            ufail = trie[u].fail;
+            if(!v){trie[u].son[i]=trie[ufail].son[i];continue;}//画好一条跳fail的路
+            trie[v].fail = trie[ufail].son[i];
+            q.push(v);
+        }
+    }
+}
+inline void query(string &s){
+    int siz = s.size(),u = 1,v,k;
+    rep(i,0,siz-1){
+        v = idx(s[i]);
+        k = trie[u].son[v];
+        while(k){
+            if(trie[k].flag){
+                cntcx[trie[k].flag]++;//计数
+                maxx = max(maxx,cntcx[trie[k].flag]);
+            }
+            k = trie[k].fail;//跳fail
+        }
+        u = trie[u].son[v];//这一句其实也有跳fail的功能，很精妙
+    }
+}
+inline void solve(){
+    cntt = 1;
+    trie[0].clr();
+    trie[1].clr();
+    rep(i,1,n){
+        cin>>ms[i];
+        insert(ms[i],i);
+    }
+    getfail();
+    cin>>s;
+    maxx = 0;
+    query(s);
+    cout<<maxx<<endl;
+    rep(i,1,n){
+        if(cntcx[i]==maxx) cout<<ms[i]<<endl;
+    }
+}
+\end{lstlisting}
 
 \subsection{FFT解决字符串匹配问题}
 可以用来解决含有通配符的字符串匹配问题
@@ -411,7 +596,63 @@ $$P(x)=\sum C(i,x+i)$$
 通过将模式串reverse后卷积，可以快速处理每个位置x上的完全匹配函数$P(x)$
 同理，如果包含通配符，则设通配符的值为0，可以构造损失函数
 $$C(x,y)=(A_x-B_x)^2 \cdot A_x \cdot B_x=A_x^3 B_x+A_xB_x^3-2A_x^2B_x^2$$
-通过三次FFT即可求得每个位置上的P(x)
+通过三次FFT即可求得每个位置上的P(x)\\
+以下是用FFT解决普通字符串匹配问题的代码\\
+即实现KMP的功能，复杂度较高，为$O(nlog_n)$\\
+\begin{lstlisting}
+void solve(){
+    limit = 1,l=0;
+    cin>>n>>m;
+    cin>>s1>>s2;
+    rep(i,0,n-1) B[i].x = s1[i]-'a'+1;
+    rep(i,0,m-1) A[i].x = s2[i]-'a'+1;
+    double T = 0;
+    //T = sigma A[i]^A[i] i=0~m-1
+    rep(i,0,m-1) T += A[i].x*A[i].x;
+    //f[x] = sigma B[i]^B[i] i=0~x
+    f[0] = B[0].x*B[0].x;
+    rep(i,1,n-1) f[i] = f[i-1]+B[i].x*B[i].x;
+    //g[x] = S[i]*B[j] i+j==x
+    reverse(A,A+m);//S = A.reverse
+    //FFT预处理
+    while(limit<=n+m-2) limit<<=1,l++;
+    rep(i,0,limit-1)
+        r[i]= ( r[i>>1]>>1 )| ( (i&1)<<(l-1) );
+    
+    FFT(A,1);FFT(B,1);
+    rep(i,0,limit) A[i]=A[i]*B[i];
+    FFT(A,-1);
+    rep(i,0,n-1) g[i] = (int)(A[i].x/limit+0.5);//四舍五入
+    
+    //T + f(x) - f(x-m) - 2g(x);
+    double tmp;
+    rep(x,m-1,n-1){
+        tmp = T+f[x]-2*g[x];
+        if(x!=m-1) tmp -= f[x-m];
+        //cout<<tmp<<' ';
+        if(fabs(tmp)<eps) cout<<x-(m-1)+1<<endl;//输出匹配上的位置
+    }
+    cout<<endl;
+}
+\end{lstlisting}
+
+\subsection{字符串哈希}
+快速取子串哈希值
+\begin{lstlisting}
+const int b = 131;//推荐的base，可以选其他质数
+void init(int n){//初始化 
+    pw[0] = 1;
+    for (int i = 1; i <= n; i ++ ) {
+        h[i] = h[i-1]*b + str[i];//做每个前缀的哈希值 
+        pw[i] = pw[i-1]*b;//预处理b^k的值 
+    }
+}
+// 计算子串 str[l ~ r] 的哈希值
+ull get(int l, int r) {
+    return h[r] - h[l-1]*pw[r-l+1];
+}
+\end{lstlisting}
+
 
 \subsection{后缀数组SA+LCP}
 LCP(i,j) 后缀i和后缀j的最长公共前缀
@@ -467,6 +708,227 @@ inline void solve(){
     get_SA();
     rep(i,1,n) cout<<sa[i]<<' ';
     cout<<endl;
+}
+\end{lstlisting}
+
+\subsection{后缀自动机SAM}
+\begin{lstlisting}
+struct state{
+    int len,link;
+    map<char,int> nxt;//也可以用数组,空间换时间
+};
+state sta[MAXN<<1];//状态数需要设定为两倍
+int sz,last;//sz为自动机大小
+inline void init_SAM(){
+    sta[0].len = 0;sta[0].link = -1;//虚拟状态t0
+    sz = 1;
+    last = 0;
+}
+int cnt[MAXN<<1];
+void SAM_extend(char c){
+    int cur = sz++;
+    cnt[cur] = 1;
+    sta[cur].len = sta[last].len+1;
+    int p = last;
+    //沿着last的link添加到c的转移，直到找到已经有c转移的状态p
+    while(p!=-1&&!sta[p].nxt.count(c)){
+        sta[p].nxt[c] = cur;
+        p = sta[p].link;
+    }
+    if(p==-1) sta[cur].link = 0;//情况1,没有符合的p
+    else{
+        int q = sta[p].nxt[c];
+        if(sta[q].len==sta[p].len+1)//情况2,稳定的转移(lenq=lenp+1,前面没有增加)
+            sta[cur].link = q;
+        else{//情况3,把q的lenp+1的部分拿出来(clone),p到clone的转移是稳定的
+            int clone = sz++;
+            cnt[clone] = 0;
+            sta[clone].len = sta[p].len+1;
+            sta[clone].nxt = sta[q].nxt;
+            sta[clone].link = sta[q].link;
+            while(p!=-1 && sta[p].nxt[c]==q){//把向q的转移指向clone
+                sta[p].nxt[c]=clone;
+                p=sta[p].link;
+            }
+            sta[q].link = sta[cur].link = clone;//clone是q的后缀,故linkq=clone
+        }
+    }
+    last = cur;//sta[last]包含目前处理的整个前缀!
+}
+string s;
+vector<int> e[MAXN<<1];
+void dfs(int now){
+    for(auto to:e[now]){
+        dfs(to);
+        cnt[now] += cnt[to];
+    }
+}
+inline void solve(){
+    cin>>s;
+    init_SAM();
+    int siz = s.size();
+    rep(i,0,siz-1) SAM_extend(s[i]);
+    rep(i,1,sz-1) e[sta[i].link].push_back(i);//link边反过来构造树
+    dfs(0);
+    ll maxx = 0;
+    rep(i,1,sz-1)
+        if(cnt[i]!=1) maxx = max(maxx,1ll*cnt[i]*sta[i].len);
+    cout<<maxx<<endl;
+}
+int main(){
+    solve();    
+}
+//P3804 【模板】后缀自动机 (SAM)
+//https://www.luogu.com.cn/problem/P3804
+\end{lstlisting}
+
+\section{其他}
+
+\subsection{ST表求RMQ}
+$O(nlog_n)$预处理，$O(1)$查询
+\begin{lstlisting}
+#define log(x) (31-__builtin_clz(x))//谢谢hjt
+const int MAXN = 1e5+10;
+const int LOGN = log(MAXN)/log(2)+5;//这里要开大一点,之前因为没开大翻车了 
+
+int M[MAXN][LOGN]; 
+int a[MAXN];
+int z,m,n;
+
+void init(){//初始化，复杂度O(nlogn) 
+	for(int i=1;i<=n;i++) M[i][0]=i;//长度为1的区间最值是自己 
+	for(int j=1;j<=LOGN;j++){
+		for(int i=1;i<=n-(1<<j)+1;i++){
+			if(a[M[i][j-1]]<a[M[i+(1<<(j-1))][j-1]]) M[i][j] = M[i][j-1];//这里以最小值为例 
+			else M[i][j] = M[i+(1<<j-1)][j-1];
+		}
+	} 
+}
+
+int query(int l,int r){
+	int k = log(r-l+1)/log(2);//向下取整
+	if(a[M[l][k]]<a[M[r-(1<<k)+1][k]]) return M[l][k];
+	else return M[r-(1<<k)+1][k];
+}
+\end{lstlisting}
+
+\subsection{莫队}
+\begin{lstlisting}
+int cnt[MAXN];//记录数字在区间[l,r]内出现的次数
+int pos[MAXN],a[MAXN];
+ll ans[MAXN];
+int n,m,k,res;
+struct Q{
+    int l,r,k;//k记录原来的编号
+    friend bool operator < (Q x,Q y){//同一个分块内r小的排前面;不同分块则按分块靠前的
+        return pos[x.l]==pos[y.l]?x.r<y.r:pos[x.l]<pos[y.l];
+        //return (pos[a.l]^pos[b.l])?pos[a.l]<pos[b.l]:((pos[a.l]&1)?a.r<b.r:a.r>b.r);
+        //这条第一个和==是一样的,后面的是对于左端点在同一奇数块的区间，右端点按升序排列，反之降序
+    }
+}q[MAXN];
+
+void Add(int pos){
+    res -= cnt[a[pos]]*cnt[a[pos]];
+    cnt[a[pos]]++;
+    res += cnt[a[pos]]*cnt[a[pos]];
+}
+void Sub(int pos){
+    res -= cnt[a[pos]]*cnt[a[pos]];
+    cnt[a[pos]]--;
+    res += cnt[a[pos]]*cnt[a[pos]];
+}
+int main(){
+    cin>>n>>m>>k;//k为数字范围
+    memset(cnt,0,sizeof(cnt));
+    int siz = sqrt(n);//每个分块的大小
+    rep(i,1,n){
+        cin>>a[i];
+        pos[i] = i/siz;//分块
+    }
+    rep(i,1,m){
+        cin>>q[i].l>>q[i].r;
+        q[i].k = i;//记录原来的编号,用于打乱顺序后的还原
+    }
+    sort(q+1,q+1+m);
+    res = 0;//初始化res
+    int l = 1,r = 0;//当前知道的区间
+    //因为是闭区间,如果是[1,1]的话则一开始就包含一个元素了
+    rep(i,1,m){//莫队的核心,注意加减的顺序
+        while(q[i].l<l) Add(--l);
+        while(q[i].l>l) Sub(l++);
+        while(q[i].r<r) Sub(r--);
+        while(q[i].r>r) Add(++r);
+        ans[q[i].k] = res;
+    }
+    rep(i,1,m) cout<<ans[i]<<endl;
+}	
+\end{lstlisting}
+
+\subsection{带修莫队}
+\begin{lstlisting}
+int a[MAXN],b[MAXN];//a读入一开始的序列,b记录修改后的
+int pos[MAXN];//分块
+int cq,cr;//统计查询修改次数
+int R[MAXN][3];//0记位置,1记原本的值,2记修改后的值
+ll res;
+int ans[MAXN];//记录结果
+int n,m;
+void Add(int x){if(cnt[x]==0)res++;cnt[x]++;}//带修莫队的add和sub有区别
+void Sub(int x){if(cnt[x]==1)res--;cnt[x]--;}
+struct Q{
+    int l,r,k,t;
+    friend bool operator < (Q a,Q b){
+        return (pos[a.l]^pos[b.l])?pos[a.l]<pos[b.l]:((pos[a.r]^pos[b.r])?a.r<b.r:a.t<b.t);
+        //增加第三关键字,询问的先后顺序,用t或者k应该都行
+    }
+}q[MAXN];
+int main(){
+    cin>>n>>m;
+    cq = cr = 0;
+    int siz = pow(n,2.0/3.0);//这么分块最好,别问
+    rep(i,1,n){
+        cin>>a[i];
+        b[i]=a[i];
+        pos[i] = i/siz;
+    }
+    char hc;
+    rep(i,1,m){//读入修改和询问
+        cin>>hc;
+        if(hc=='Q'){
+            cin>>q[cq].l>>q[cq].r;
+            q[cq].k=cq;q[cq].t=cr;//注意这时候R[cr]还是没有的,这次询问是在R[cr-1]之后的
+            cq++;
+        }
+        else{
+            cin>>R[cr][0]>>R[cr][2];
+            R[cr][1] = b[R[cr][0]];
+            b[R[cr][0]] = R[cr][2];//在b数组中记录更改
+            cr++;
+        }
+    }
+    sort(q,q+cq);
+    int l=1,r=0,sjc=0;//时间戳
+    res = 0;
+    rep(i,0,cq-1){
+        while(sjc<q[i].t){
+            if(l<=R[sjc][0]&&R[sjc][0]<=r)//判断修改是否在该区间内
+                Sub(R[sjc][1]),Add(R[sjc][2]);
+            a[R[sjc][0]] = R[sjc][2];//在a上也进行更改
+            sjc++;
+        }
+        while(sjc>q[i].t){
+            sjc--;
+            if(l<=R[sjc][0]&&R[sjc][0]<=r)//判断修改是否在该区间内
+                Sub(R[sjc][2]),Add(R[sjc][1]);
+            a[R[sjc][0]] = R[sjc][1];//在a上也进行更改
+        }
+        while(l>q[i].l) Add(a[--l]);
+        while(l<q[i].l) Sub(a[l++]);
+        while(r<q[i].r) Add(a[++r]);
+        while(r>q[i].r) Sub(a[r--]);
+        ans[q[i].k] = res;
+    }
+    rep(i,0,cq-1) cout<<ans[i]<<endl;
 }
 \end{lstlisting}
 
