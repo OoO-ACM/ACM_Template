@@ -1,5 +1,10 @@
 %==============================常用宏包、环境==============================%
-\documentclass[twocolumn,a4]{article}
+\documentclass[a4]{ctexart}
+\usepackage[a4paper]{geometry}
+\RequirePackage{zhnumber}                
+\RequirePackage{titlesec, titletoc}
+\RequirePackage{tikz,pgf}
+\usetikzlibrary{shapes,calc}
 \usepackage{xeCJK} % For Chinese characters
 \usepackage{amsmath, amsthm}
 \usepackage{listings,xcolor}
@@ -19,14 +24,18 @@
 %==============================页眉、页脚、代码格式设置==============================%
 % 页眉、页脚设置
 \pagestyle{fancy}
-% \lhead{CUMTB}
+\fancyhf{}
+%\lhead[\thepage]{\leftmark} 
+% \rhead[\nouppercase{\rightmark}]{\thepage}
+ \lhead{CUMTB}
+%\lhead[\thepage]{\leftmark} 
 \lhead{\CJKfamily{hei} 泡泡猿专用模板}
 \rhead{第 \thepage 页}
 % \rhead{Page \thepage}
-\chead{\leftmark} 
-\lfoot{} 
-\cfoot{}
-\rfoot{}
+\chead[\thepage]{\leftmark} 
+%\lfoot{} 
+%\cfoot{}
+%\rfoot{}
 \renewcommand{\headrulewidth}{0.4pt} 
 \renewcommand{\footrulewidth}{0.4pt}
 
@@ -59,7 +68,7 @@
 \maketitle
 \begin{figure}[H] %H为当前位置，!htb为忽略美学标准，htbp为浮动图形
 \centering %图片居中
-\includegraphics[width=0.7\textwidth]{1.jpg} %插入图片，[]中设置图片大小，{}中是图片文件名
+\includegraphics[width=0.7\textwidth]{1.png } %插入图片，[]中设置图片大小，{}中是图片文件名
 \end{figure}
 \end{titlepage}
 
@@ -193,7 +202,10 @@ signed main()
 #include<cmath>
 using namespace std;
 
-template<class T>inline void read(T &x){x=0;char o,f=1;while(o=getchar(),o<48)if(o==45)f=-f;do x=(x<<3)+(x<<1)+(o^48);while(o=getchar(),o>47);x*=f;}
+template<class T>inline void read(T &x){
+	x=0;char o,f=1;
+	while(o=getchar(),o<48)if(o==45)f=-f;
+	do x=(x<<3)+(x<<1)+(o^48);while(o=getchar(),o>47);x*=f;}
 int cansel_sync=(ios::sync_with_stdio(0),cin.tie(0),0);
 #define ll long long
 #define ull unsigned long long
@@ -294,7 +306,143 @@ void init(int p){
 	}
 }
 \end{lstlisting}
-
+\subsection{多项式}
+\subsubsection{FFT快速傅里叶变换}
+\begin{lstlisting}
+const int SIZE=(1<<21)+5;
+const double PI=acos(-1);
+struct CP{
+    double x,y;
+    CP(double x=0,double y=0):x(x),y(y){}
+    CP operator +(const CP &A)const{return CP(x+A.x,y+A.y);}
+    CP operator -(const CP &A)const{return CP(x-A.x,y-A.y);}
+    CP operator *(const CP &A)const{return CP(x*A.x-y*A.y,x*A.y+y*A.x);}
+};
+int limit,rev[SIZE];
+void DFT(CP *F,int op){
+    for(int i=0;i<limit;i++)if(i<rev[i])swap(F[i],F[rev[i]]);
+    for(int mid=1;mid<limit;mid<<=1){
+        CP wn(cos(PI/mid),op*sin(PI/mid));
+        for(int len=mid<<1,k=0;k<limit;k+=len){
+            CP w(1,0);
+            for(int i=k;i<k+mid;i++){
+                CP tmp=w*F[i+mid];
+                F[i+mid]=F[i]-tmp;
+                F[i]=F[i]+tmp;
+                w=w*wn;
+            }
+        }
+    }
+    if(op==-1)for(int i=0;i<limit;i++)F[i].x/=limit;
+}
+void FFT(int n,int m,CP *F,CP *G){
+    for(limit=1;limit<=n+m;limit<<=1);
+    for(int i=0;i<limit;i++)rev[i]=(rev[i>>1]>>1)|((i&1)?limit>>1:0);
+    DFT(F,1),DFT(G,1);
+    for(int i=0;i<limit;i++)F[i]=F[i]*G[i];
+    DFT(F,-1);
+}
+\end{lstlisting}
+\subsubsection{NTT快速数论变换}
+\begin{lstlisting}
+const int SIZE=(1<<21)+5;
+int limit,rev[SIZE];
+void DFT(ll *f, int op) {
+    const ll G = 3;
+    for(int i=0; i<limit; ++i) if(i<rev[i]) swap(f[i],f[rev[i]]);
+    for(int len=2; len<=limit; len<<=1) {
+        ll w1=pow(pow(G,(mod-1)/len),~op?1:mod-2);
+        for(int l=0, hf=len>>1; l<limit; l+=len) {
+            ll w=1;
+            for(int i=l; i<l+hf; ++i) {
+                ll tp=w*f[i+hf]%mod;
+                f[i+hf]=(f[i]-tp+mod)%mod;
+                f[i]=(f[i]+tp)%mod;
+                w=w*w1%mod;
+            }
+        }
+    }
+    if(op==-1) for(int i=0, inv=pow(limit,mod-2); i<limit; ++i) f[i]=f[i]*inv%mod;
+}
+void NTT(int n,int m,int *F,int *G){
+    for(limit=1;limit<=n+m;limit<<=1);
+    for(int i=0;i<limit;i++)rev[i]=(rev[i>>1]>>1)|((i&1)?limit>>1:0);
+    DFT(F,1),DFT(G,1);
+    for(int i=0;i<limit;i++)F[i]=F[i]*G[i];
+    DFT(F,-1);
+}
+\end{lstlisting}
+\subsubsection{MTT任意模数FFT}
+FFT版常数巨大，慎用。
+\begin{lstlisting}
+struct MTT{
+    static const int N=1<<20;
+    struct cp{
+        long double a,b;
+        cp(){a=0,b=0;}
+        cp(const long double &a,const long double &b):a(a),b(b){}
+        cp operator+(const cp &t)const{return cp(a+t.a,b+t.b);}
+        cp operator-(const cp &t)const{return cp(a-t.a,b-t.b);}
+        cp operator*(const cp &t)const{return cp(a*t.a-b*t.b,a*t.b+b*t.a);}
+        cp conj()const{return cp(a,-b);}
+    };
+    cp wn(int n,int f){
+        static const long double pi=acos(-1.0);
+        return cp(cos(pi/n),f*sin(pi/n));
+    }
+    int g[N];
+    void dft(cp a[],int n,int f){
+        for(int i=0;i<n;i++)if(i>g[i])swap(a[i],a[g[i]]);
+        for(int i=1;i<n;i<<=1){
+            cp w=wn(i,f);
+            for(int j=0;j<n;j+=i<<1){
+                cp e(1,0);
+                for(int k=0;k<i;e=e*w,k++){
+                    cp x=a[j+k],y=a[j+k+i]*e;
+                    a[j+k]=x+y,a[j+k+i]=x-y;
+                }
+            }
+        }
+        if(f==-1){
+            cp Inv(1.0/n,0);
+            for(int i=0;i<n;i++)a[i]=a[i]*Inv;
+        }
+    }
+    cp a[N],b[N],Aa[N],Ab[N],Ba[N],Bb[N];
+    vector<ll> conv_mod(const vector<ll> &u,const vector<ll> &v,ll mod){ // 任意模数fft
+        const int n=(int)u.size()-1,m=(int)v.size()-1,M=sqrt(mod)+1;
+        const int k=32-__builtin_clz(n+m+1),s=1<<k;
+        g[0]=0; for(int i=1;i<s;i++)g[i]=(g[i/2]/2)|((i&1)<<(k-1));
+        for(int i=0;i<s;i++){
+            a[i]=i<=n?cp(u[i]%mod%M,u[i]%mod/M):cp();
+            b[i]=i<=m?cp(v[i]%mod%M,v[i]%mod/M):cp();
+        }
+        dft(a,s,1); dft(b,s,1);
+        for(int i=0;i<s;i++){
+            int j=(s-i)%s;
+            cp t1=(a[i]+a[j].conj())*cp(0.5,0);
+            cp t2=(a[i]-a[j].conj())*cp(0,-0.5);
+            cp t3=(b[i]+b[j].conj())*cp(0.5,0);
+            cp t4=(b[i]-b[j].conj())*cp(0,-0.5);
+            Aa[i]=t1*t3,Ab[i]=t1*t4,Ba[i]=t2*t3,Bb[i]=t2*t4;
+        }
+        for(int i=0;i<s;i++){
+            a[i]=Aa[i]+Ab[i]*cp(0,1);
+            b[i]=Ba[i]+Bb[i]*cp(0,1);
+        }
+        dft(a,s,-1); dft(b,s,-1);
+        vector<ll> ans;
+        for(int i=0;i<n+m+1;i++){
+            ll t1=llround(a[i].a)%mod;
+            ll t2=llround(a[i].b)%mod;
+            ll t3=llround(b[i].a)%mod;
+            ll t4=llround(b[i].b)%mod;
+            ans.push_back((t1+(t2+t3)*M%mod+t4*M*M)%mod);
+        }
+        return ans;
+    }
+}mtt;
+\end{lstlisting}
 \subsection{组合数}
 预处理阶乘，并通过逆元实现相除
 \begin{lstlisting}
@@ -326,15 +474,13 @@ int main(){
 \begin{lstlisting}
 struct Matrix{
 	ll a[MAXN][MAXN];
-	
-	Matrix(ll x=0){//感觉是特别好的初始化,从hjt那里学(抄)来的 
+	Matrix(ll x=0){
 		for(int i=0;i<n;i++){
 			for(int j=0;j<n;j++){
-				a[i][j]=x*(i==j);//这句特简洁		
+				a[i][j]=x*(i==j);
 			}
 		}
 	}
-	
 	Matrix operator *(const Matrix &b)const{//通过重载运算符实现矩阵乘法 
 		Matrix res(0);
 		for(int i=0;i<n;i++){
@@ -348,14 +494,11 @@ struct Matrix{
 		return res;
 	}
 };
-
 Matrix qpow(Matrix d,ll m){//底数和幂次数 
 	Matrix res(1);//构造E单位矩阵 
 	while(m){
-		if(m&1){
-			m--;//其实这句是可以不要的 
+		if(m&1) 
 			res=res*d;
-		}
 		d=d*d;
 		m>>=1;
 	}
@@ -364,8 +507,35 @@ Matrix qpow(Matrix d,ll m){//底数和幂次数
 \end{lstlisting}
 
 \subsection{高斯消元}
+$O(n^3)$复杂度，需要用double存储。
 \begin{lstlisting}
-待补充
+double date[110][110];
+bool guass(int n){
+    for(int i=1;i<=n;i++){
+        int mix=-1;
+        for(int j=i;j<=n;j++)
+            if(date[j][i]!=0){
+                mix=j;break;
+            }
+        if(mix==-1)
+            return false;
+        if(mix!=i)
+            for(int j=1;j<=n+1;j++)
+                swap(date[mix][j],date[i][j]);
+        double t=date[i][i];
+        for(int j=i;j<=n+1;j++){
+            date[i][j]=date[i][j]/t;
+        }
+        for(int j=1;j<=n;j++){
+            if(date[j][i]==0||j==i)
+                continue;
+            double g=date[j][i]/date[i][i];
+            for(int k=1;k<=n+1;k++)
+                date[j][k]-=date[i][k]*g;
+        }
+    }                                                                         
+    return true;
+}
 \end{lstlisting}
 
 \subsection{三点求圆心}
@@ -398,9 +568,304 @@ a^{b\%\phi(p)+\phi(p)} , & \gcd(a,p)\neq 1 , b\geq \phi(p)\\
 \end{cases}
 (\mod p)
 $$
+\subsection{拉格朗日插值}
+\begin{lstlisting}
+namespace polysum {
+#define rep(i,a,n) for (int i=a;i<n;i++)
+#define per(i,a,n) for (int i=n-1;i>=a;i--)
+const int D = 1010000; ///可能需要用到的最高次
+LL a[D], f[D], g[D], p[D], p1[D], p2[D], b[D], h[D][2], C[D];
+LL powmod(LL a, LL b) {
+    LL res = 1;
+    a %= mod;
+    assert(b >= 0);
 
+    for (; b; b >>= 1) {
+        if (b & 1)
+            res = res * a % mod;
+
+        a = a * a % mod;
+    }
+
+    return res;
+}
+
+///函数用途：给出数列的（d+1）项，其中d为最高次方项
+///求出数列的第n项，数组下标从0开始
+LL calcn(int d, LL *a, LL n) { /// a[0].. a[d]  a[n]
+    if (n <= d)
+        return a[n];
+
+    p1[0] = p2[0] = 1;
+    rep(i, 0, d + 1) {
+        LL t = (n - i + mod) % mod;
+        p1[i + 1] = p1[i] * t % mod;
+    }
+    rep(i, 0, d + 1) {
+        LL t = (n - d + i + mod) % mod;
+        p2[i + 1] = p2[i] * t % mod;
+    }
+    LL ans = 0;
+    rep(i, 0, d + 1) {
+        LL t = g[i] * g[d - i] % mod * p1[i] % mod * p2[d - i] % mod * a[i] % mod;
+
+        if ((d - i) & 1)
+            ans = (ans - t + mod) % mod;
+        else
+            ans = (ans + t) % mod;
+    }
+    return ans;
+}
+void init(int M) {///用到的最高次
+    f[0] = f[1] = g[0] = g[1] = 1;
+    rep(i, 2, M + 5) f[i] = f[i - 1] * i % mod;
+    g[M + 4] = powmod(f[M + 4], mod - 2);
+    per(i, 1, M + 4) g[i] = g[i + 1] * (i + 1) % mod; ///费马小定理筛逆元
+}
+
+///函数用途：给出数列的（m+1）项，其中m为最高次方
+///求出数列的前（n-1）项的和（从第0项开始）
+LL polysum(LL m, LL *a, LL n) { /// a[0].. a[m] \sum_{i=0}^{n-1} a[i]
+    for (int i = 0; i <= m; i++)
+        b[i] = a[i];
+
+    ///前n项和，其最高次幂加1
+    b[m + 1] = calcn(m, b, m + 1);
+    rep(i, 1, m + 2) b[i] = (b[i - 1] + b[i]) % mod;
+    return calcn(m + 1, b, n - 1);
+}
+LL qpolysum(LL R, LL n, LL *a, LL m) { /// a[0].. a[m] \sum_{i=0}^{n-1} a[i]*R^i
+    if (R == 1)
+        return polysum(n, a, m);
+
+    a[m + 1] = calcn(m, a, m + 1);
+    LL r = powmod(R, mod - 2), p3 = 0, p4 = 0, c, ans;
+    h[0][0] = 0;
+    h[0][1] = 1;
+    rep(i, 1, m + 2) {
+        h[i][0] = (h[i - 1][0] + a[i - 1]) * r % mod;
+        h[i][1] = h[i - 1][1] * r % mod;
+    }
+    rep(i, 0, m + 2) {
+        LL t = g[i] * g[m + 1 - i] % mod;
+
+        if (i & 1)
+            p3 = ((p3 - h[i][0] * t) % mod + mod) % mod, p4 = ((p4 - h[i][1] * t) % mod + mod) % mod;
+        else
+            p3 = (p3 + h[i][0] * t) % mod, p4 = (p4 + h[i][1] * t) % mod;
+    }
+    c = powmod(p4, mod - 2) * (mod - p3) % mod;
+    rep(i, 0, m + 2) h[i][0] = (h[i][0] + h[i][1] * c) % mod;
+    rep(i, 0, m + 2) C[i] = h[i][0];
+    ans = (calcn(m, C, n) * powmod(R, n) - c) % mod;
+
+    if (ans < 0)
+        ans += mod;
+
+    return ans;
+}
+}
+\end{lstlisting}
+\section{数据结构}
+\subsection{并查集系列}
+\subsubsection{普通并查集}
+带路径压缩,$O(1)$复杂度
+\begin{lstlisting}
+int fa[maxn];
+int find(int x){if(fa[x]^x)return fa[x]=find(fa[x]);return x;}
+void merge(int a,int b){fa[find(a)]=find(b);}	
+\end{lstlisting}
+\subsubsection{按秩合并并查集}
+\begin{lstlisting}
+int fa[maxn];
+int dep[maxn];
+int find(int x){int now=x; while(fa[now]^now)now=fa[now];return now;}
+void merge(int a,int b){
+    int l=find(a),r=find(b);
+    if(l==r) return;
+    if(dep[l]>dep[r])swap(l,r);
+    fa[l]=r;
+    dep[r]+=dep[l]==dep[r];
+}
+\end{lstlisting}
+\subsubsection{可持久化并查集}
+\begin{lstlisting}
+struct chair_man_tree{
+    struct node{
+        int lson,rson;
+    }tree[maxn<<5];
+    int tail=0;
+    int tail2=0;
+    int fa[maxn<<2];
+    int depth[maxn<<2];
+    inline int getnew(int pos){
+        tree[++tail]=tree[pos];
+        return tail;
+    }
+    int build(int l,int r){
+        
+        if(l==r){
+            fa[++tail2]=l;
+            depth[tail2]=1;
+            return tail2;
+        }
+        int now=tail++;
+        int mid=(l+r)>>1;
+        tree[now].lson=build(l,mid);
+        tree[now].rson=build(mid+1,r);
+        return now;
+    }
+    int query(int pos,int l,int r,int qr){
+        if(l==r)
+            return pos;
+        int mid=(l+r)>>1;
+        if(qr<=mid)
+            return query(tree[pos].lson,l,mid,qr);
+        else return query(tree[pos].rson,mid+1,r,qr);
+    }
+    int update(int pos,int l,int r,int qr,int val){
+        if(l==r){
+            depth[++tail2]=depth[pos];
+            fa[tail2]=val;
+            return tail2;
+        }
+        int now=getnew(pos);
+        int mid=(l+r)>>1;
+        if(mid>=qr)
+            tree[now].lson=update(tree[now].lson,l,mid,qr,val);
+        else tree[now].rson=update(tree[now].rson,mid+1,r,qr,val);
+        return now;
+    }
+    int add(int pos,int l,int r,int qr){
+        if(l==r){
+            depth[++tail2]=depth[pos]+1;
+            fa[tail2]=fa[pos];
+            return tail2;
+        }
+        int now=getnew(pos);
+        int mid=(l+r)>>1;
+        if(mid>=qr)
+            tree[now].lson=add(tree[now].lson,l,mid,qr);
+        else tree[now].rson=add(tree[now].rson,mid+1,r,qr);
+        return now;
+    }
+    int getfa(int root,int qr){
+        int t=fa[query(root,1,n,qr)];
+        if(qr==t)
+        return qr;
+        else return getfa(root,t);
+    }
+}t;
+\end{lstlisting}
+\subsubsection{ETT维护动态图连通性}
+待补
+\subsection{平衡树系列}
+\subsubsection{fhq\_treap}
+无旋treap，可持久化，常数大
+\begin{lstlisting}
+mt19937 rnd(514114);
+struct fhq_treap{
+    struct node{
+        int l, r;
+        int val, key;
+        int size;
+    } fhq[maxn];
+    int cnt, root;
+    inline int newnode(int val){
+        fhq[++cnt].val = val;
+        fhq[cnt].key = rnd();
+        fhq[cnt].size = 1;
+        fhq[cnt].l = fhq[cnt].r = 0;
+        return cnt;
+    }
+    inline void pushup(int now){
+    fhq[now].size = fhq[fhq[now].l].size + fhq[fhq[now].r].size + 1;
+    }
+    void split(int now, int val, int &x, int &y){
+        if (!now){
+            x = y = 0;
+            return;
+        }
+        else if (fhq[now].val <= val){
+        x = now;
+        split(fhq[now].r, val, fhq[now].r, y);
+        }
+        else{
+        y = now;
+        split(fhq[now].l, val, x, fhq[now].l);
+        }
+    pushup(now);
+    }
+    int merge(int x, int y){
+        if (!x || !y)
+            return x + y;
+        if (fhq[x].key > fhq[y].key){
+            fhq[x].r = merge(fhq[x].r, y);
+            pushup(x);
+            return x;
+        }else{
+            fhq[y].l = merge(x, fhq[y].l);
+            pushup(y);
+            return y;
+        }
+    }
+    inline void insert(int val){
+        int x, y;
+        split(root, val, x, y);
+        root = merge(merge(x, newnode(val)), y);
+    }
+    inline void del(int val){
+        int x, y, z;
+        split(root, val - 1, x, y);
+        split(y, val, y, z);
+        y = merge(fhq[y].l, fhq[y].r);
+        root = merge(merge(x, y), z);
+    }
+    inline int getrk(int num){
+        int x, y;
+        split(root, num - 1, x, y);
+        int ans = fhq[x].size + 1;
+        root = merge(x, y);
+        return ans;
+    }
+    inline int getnum(int rank){
+        int now=root;
+        while(now)
+        {
+            if(fhq[fhq[now].l].size+1==rank)
+               break;
+            else if(fhq[fhq[now].l].size>=rank)
+                now=fhq[now].l;
+            else{
+                rank-=fhq[fhq[now].l].size+1;
+                now=fhq[now].r;
+            }
+        }
+        return fhq[now].val;
+    }
+    inline int pre(int val){
+        int x, y, ans;
+        split(root, val - 1, x, y);
+        int t = x;
+        while (fhq[t].r)
+            t = fhq[t].r;
+        ans = fhq[t].val;
+        root = merge(x, y);
+        return ans;
+    }
+    inline int aft(int val){
+        int x, y, ans;
+        split(root, val, x, y);
+        int t = y;
+        while (fhq[t].l)
+            t = fhq[t].l;
+        ans = fhq[t].val;
+        root = merge(x, y);
+        return ans;
+    }
+} tree;
+\end{lstlisting}
 \section{字符串}
-
 \subsection{FFT解决字符串匹配问题}
 可以用来解决含有通配符的字符串匹配问题
 定义匹配函数 $$(x,y) = (A_x-B_x)^2$$
@@ -470,7 +935,7 @@ inline void solve(){
 }
 \end{lstlisting}
 
-\section{STL等小技巧}
+\section{杂项}
 
 \subsection{集合set}
 还可以通过lower\_bound和upper\_bound返回迭代器来找前驱,后继
