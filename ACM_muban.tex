@@ -522,6 +522,33 @@ struct MTT{
     }
 }mtt;
 \end{lstlisting}
+\subsubsection{FWT快速沃尔什变换}
+\begin{center}
+计算
+$$C_i=\sum_{j \bigoplus k = i}^{n}  {A_j \times B_k}$$
+$\bigoplus$ 可以是 与、或、异或
+\end{center}
+\begin{lstlisting}
+void FWT(ll *f, int op) {
+    for(int len=2; len<=up; len<<=1) {
+        for(int l=0, hf=len>>1; l<up; l+=len) {
+            for(int i=l; i<l+hf; ++i) {
+                ll x=f[i], y=f[i+hf];
+                if(op>0) {
+                    if(op==1) f[i]=(x+y)%mod, f[i+hf]=(x-y+mod)%mod; //xor
+                    else if(op==2) f[i]=(x+y)%mod; //and
+                    else f[i+hf]=(x+y)%mod; //or
+                }
+                else {
+                    if(op==-1) f[i]=(x+y)*inv2%mod, f[i+hf]=(x-y+mod)*inv2%mod; //xor
+                    else if(op==-2) f[i]=(x-y+mod)%mod; //and
+                    else f[i+hf]=(y-x+mod)%mod; //or
+                }
+            }
+        }
+    }
+}
+\end{lstlisting}
 \subsection{组合数}
 预处理阶乘，并通过逆元实现相除
 \begin{lstlisting}
@@ -1277,8 +1304,6 @@ inline void solve(){
 int main(){
     solve();    
 }
-//P3804 【模板】后缀自动机 (SAM)
-//https://www.luogu.com.cn/problem/P3804
 \end{lstlisting}
 
 \section{其他}
