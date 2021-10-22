@@ -1,3 +1,4 @@
+% !TeX program = xelatex
 %==============================常用宏包、环境==============================%
 \documentclass[a4]{ctexart}
 \usepackage[a4paper]{geometry}
@@ -609,6 +610,390 @@ a^{b\%\phi(p)+\phi(p)} , & \gcd(a,p)\neq 1 , b\geq \phi(p)\\
 \end{cases}
 (\mod p)
 $$
+\section{图论}
+
+\subsection{dijkstra}
+\begin{lstlisting}
+vector<pii> G[N];
+int dis[N];
+bool vis[N];
+void dijkstra(int n,int pos){
+    rep(i,1,n) dis[i]=inf,vis[i]=0;
+    priority_queue<pii,vector<pii>,greater<pii>> pq;
+    pq.push({0,pos});
+    dis[pos]=0;
+    while(!pq.empty()){
+        pii top=pq.top(); pq.pop();
+        int u=top.sc,d=top.fr;
+        if(vis[u]) continue;
+        for(auto e:G[u]){
+            int v=e.fr;
+            if(dis[v]>d+e.sc) {
+                dis[v]=d+e.sc;
+                pq.push({dis[v],v});
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{2-Sat}
+\begin{lstlisting}
+//
+struct TwoSat{
+    //适用于存在多个二选一抉择(互斥)，且不同编号抉择间存在互斥关系的问题
+    //考虑到不会撤回操作 复杂度O(N)
+    //编号从0开始
+	int n;
+	vector<int> G[2*N];
+	int S[2*N],c=0;
+	bool mark[2*N],ok;
+	void init(int n){
+		this->n=n,ok=1;
+		rep(i,0,n*2) mark[i]=0;
+		rep(i,0,n*2) G[i].clear();
+	}
+	bool dfs(int u){
+		if(mark[u^1]) return false;
+		if(mark[u]) return true;
+		S[++c]=u;
+		mark[u]=1;
+		for(auto v:G[u]){
+			if(!dfs(v)) return false;
+		}
+		return true;
+	}
+	//x,y代表抉择编号,val代表选0/1
+	void add(int x,int xval,int y,int yval){
+		x=x*2+xval,y=y*2+yval;
+		G[x^1].push_back(y);
+		G[y^1].push_back(x);
+	}
+	void solve(){
+		rep(i,0,n-1){
+			c=0;
+			if(!dfs(i*2)){
+				while(c) mark[S[c--]]=0;
+				if(!dfs(i*2+1)) ok=0;
+			}
+		}
+	}
+}solver;
+\end{lstlisting}
+
+\subsection{最大团}
+\begin{lstlisting}
+//假了
+
+\end{lstlisting}
+
+\subsection{稳定婚姻}
+\begin{lstlisting}
+//构造一种匹配方式，使得不存在一组未被选中且双方好感更高的匹配
+int B[N][N],G[N][N];//x对x的好感
+vector<int> vec[N];
+int pos[N],px[N],py[N],cur;
+queue<int> que;
+bool cmp(const int x,const int y){
+	return B[cur][x]>B[cur][y];
+}
+void stable_marriage(int n){
+	 memset(pos,0,sizeof(pos));
+	 memset(py,0,sizeof(py));
+	 rep(i,1,n) vec[i].clear();
+	 rep(i,1,n) rep(j,1,n) vec[i].push_back(j);
+	 rep(i,1,n) {
+	 	cur=i;
+	 	sort(vec[i].begin(),vec[i].end(),cmp);
+	 }
+	 rep(i,1,n) que.push(i);
+	 while(!que.empty()){
+	 	queue<int> tq;
+	 	while(!que.empty()){
+	 		int b=que.front(); que.pop();
+	 		int p=pos[b]++,g=vec[b][p];
+	 		if(!py[g]||G[g][b]>G[g][py[g]]){
+	 			if(py[g]) tq.push(py[g]);
+	 			py[g]=b,px[b]=g;
+	 		}
+	 		else tq.push(b);			
+	 	}
+	 	que=tq;
+	 }
+}
+
+\end{lstlisting}
+
+\subsection{点双连通分量}
+\begin{lstlisting}
+vector<int> G[N],bcc[N];
+int pre[N]={0},low[N];
+int cur,bcnt,bccno[N]; //=0;
+bool iscut[N];
+stack<pii> S;
+void dfs(int u,int fa){
+	low[u]=pre[u]=++cur;
+	int child=0;
+	for(auto v:G[u]){
+		if(v==fa) continue;
+		if(pre[v]&&pre[v]<pre[u]) {
+			//S.push({u,v}); 
+			low[u]=min(low[u],pre[v]);
+		} 
+		else if(!pre[v]){
+			S.push({u,v});
+			child++;
+			dfs(v,u);
+			low[u]=min(low[u],low[v]);
+			if(low[v]>=pre[u]){
+				iscut[u]=1;
+				bcnt++; bcc[bcnt].clear();
+				while(1){
+					pii x=S.top(); S.pop();
+					if(bccno[x.fr]!=bcnt){
+						bcc[bcnt].push_back(x.fr); 			
+						bccno[x.fr]=bcnt;
+					}
+					if(bccno[x.sc]!=bcnt){
+						bcc[bcnt].push_back(x.sc);
+					     	bccno[x.sc]=bcnt;
+					}
+					if(x.fr==u&&x.sc==v) break;
+				}
+			}
+		}
+	}
+	if(fa==-1&&child==1) iscut[u]=0;
+
+\end{lstlisting}
+
+\subsection{强连通分量}
+\begin{lstlisting}
+vector<int> G[N];
+int sccno[N],dfn[N],low[N],scnt,tot;
+stack<int> S;
+void tarjan(int u){
+	dfn[u]=low[u]=++tot;
+	S.push(u);
+	for(auto v:G[u]){
+		if(sccno[v]) continue;		
+		if(!dfn[v]){
+			tarjan(v);
+			low[u]=min(low[u],low[v]);
+		}
+		else low[u]=min(low[u],dfn[v]); //low[v] is also ok.
+	}
+	if(low[u]==dfn[u]){
+		scnt++;
+		int top=-1;
+		while(top!=u){
+			top=S.top(); S.pop();
+			sccno[top]=scnt;
+		}
+	}
+}
+
+\end{lstlisting}
+
+\subsection{最小树形图}
+\begin{lstlisting}
+struct Edge{int u,v,w,b;};
+vector<Edge> eset,E;
+int fa[N],minw[N],id[N],top[N];
+ll solve(int n,int rt){
+    ll res=0;
+    while(1){
+        int cnt=0;
+        rep(i,1,n) minw[i]=inf,id[i]=top[i]=0;
+        for(auto &e:eset){
+            if(e.u!=e.v&&e.w<minw[e.v]){
+                minw[e.v]=e.w;
+                fa[e.v]=e.u;
+            }
+        }
+        minw[rt]=0;
+        rep(i,1,n){
+            if(minw[i]==inf) return -1;
+            res+=minw[i];
+            for(int u=i;!id[u]&&u!=rt;u=fa[u]){
+                if(top[u]==i){
+                    id[u]=++cnt;
+                    for(int v=fa[u];v!=u;v=fa[v]){
+                        id[v]=cnt;
+                    }
+                    break;
+                }
+                else top[u]=i;
+            }
+        }
+        if(!cnt) return res;
+        rep(i,1,n) if(!id[i]) id[i]=++cnt;
+        for(auto &e:eset){
+            e.w-=minw[e.v];
+            e.u=id[e.u],e.v=id[e.v];
+        }
+        n=cnt;
+        rt=id[rt];
+
+\end{lstlisting}
+
+\subsection{O(N^3)二分图最大权匹配 KM}
+\begin{lstlisting}
+int n;
+ll G[N][N];
+int px[N],py[N],vx[N],vy[N],pre[N];
+ll lx[N],ly[N],slack[N],d;
+queue<int> que;
+void upd(int v){
+	int t;
+	while(v){
+		t=px[pre[v]];
+		py[v]=pre[v];
+		px[pre[v]]=v;
+		v=t;
+	}
+}
+void bfs(int x){
+	rep(i,1,n) vy[i]=vx[i]=0,slack[i]=inf;
+	while(!que.empty()) que.pop();
+	que.push(x);
+	while(1){
+		while(!que.empty()){
+			int u=que.front(); que.pop();
+			vx[u]=1;
+			rep(v,1,n) if(!vy[v]){
+				if(lx[u]+ly[v]-G[u][v]<slack[v]){
+					slack[v]=lx[u]+ly[v]-G[u][v];
+					pre[v]=u;
+					if(!slack[v]){
+						vy[v]=1;
+						if(!py[v]) {upd(v); return;}
+						else que.push(py[v]);
+					}
+				}
+			}
+		}
+		d=inf;
+		rep(i,1,n) if(slack[i]) d=min(d,slack[i]);
+		rep(i,1,n) {
+			if(vx[i]) lx[i]-=d;
+			if(vy[i]) ly[i]+=d; 
+			else slack[i]-=d;
+		}
+		rep(i,1,n){
+			if(!vy[i]&&!slack[i]) {
+				vy[i]=1;
+				if(!py[i]) {upd(i); return;}
+				else que.push(py[i]);
+			}
+		}
+	}
+}
+ll KM(){
+	ll res=0;
+	fill(lx+1,lx+n+1,-inf); memset(ly,0,sizeof(ly));
+	memset(px,0,sizeof(px)); memset(py,0,sizeof(py));
+	memset(pre,0,sizeof(pre));
+	rep(i,1,n) rep(j,1,n) lx[i]=max(lx[i],G[i][j]);
+	rep(i,1,n) bfs(i);
+	rep(i,1,n) res+=G[i][px[i]];
+	return res;
+}
+
+\end{lstlisting}
+
+\subsection{差分约束}
+\begin{lstlisting}
+//介绍WIP
+vector<pair<int,ll>> G[N];
+bool inque[N];
+int incnt[N];
+ll dis[N];
+bool bellman_ford(ll x){
+    queue<int> que;
+    rep(i,1,n) {
+        dis[i]=0,inque[i]=1,incnt[i]=0;
+        que.push(i);
+    }
+    while(!que.empty()){
+        int u=que.front(); que.pop();
+        inque[u]=0;
+        for(auto e:G[u]){
+            int v=e.fr;
+            //cout<<dis[u]<<" "<<e.sc<<" "<<dis[v]<<endl;
+            if(dis[u]+e.sc<dis[v]){
+                dis[v]=dis[u]+e.sc;
+                if(!inque[v]){
+                    inque[v]=1;
+                    que.push(v);
+                    if(++incnt[v]>n) return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+\end{lstlisting}
+
+\subsection{一般图最大权匹配 带花树(hjt)}
+\begin{lstlisting}
+int n;
+vector<int> G[N];
+struct DSU {  // join: d[x] = d[y], query: d[x] == d[y]
+    int a[N];
+    void init(int n) { iota(a, a + n + 1, 0); }
+    int fa(int x) { return a[x] == x ? x : a[x] = fa(a[x]); }
+    int &operator[](int x) { return a[fa(x)]; }
+} d;
+deque<int> q;
+int mch[N],vis[N],dfn[N],fa[N],dcnt=0;
+int lca(int x,int y){
+    dcnt++;
+    while(1){
+        if(x==0)swap(x,y); x=d[x];
+        if(dfn[x]==dcnt)return x;
+        else dfn[x]=dcnt,x=fa[mch[x]];
+    }
+}
+void shrink(int x,int y,int p){
+    while(d[x]!=p){
+        fa[x]=y; y=mch[x];
+        if(vis[y]==2)vis[y]=1,q.push_back(y);
+        if(d[x]==x)d[x]=p;
+        if(d[y]==y)d[y]=p;
+        x=fa[y];
+    }
+}
+bool match(int s){
+    d.init(n); fill(fa,fa+n+1,0);
+    fill(vis,vis+n+1,0); vis[s]=1;
+    q.assign(1,s);
+    while(!q.empty()){
+        int x=q.front(); q.pop_front();
+        for(auto p:G[x]){
+            if(d[x]==d[p] || vis[p]==2)continue;
+            if(!vis[p]){
+                vis[p]=2; fa[p]=x;
+                if(!mch[p]){
+                    for(int now=p,last,tmp;now;now=last){
+                        last=mch[tmp=fa[now]];
+                        mch[now]=tmp,mch[tmp]=now;
+                    }
+                    return 1;
+                }
+                vis[mch[p]]=1; q.push_back(mch[p]);
+            }
+            else if(vis[p]==1){
+                int l=lca(x,p);
+                shrink(x,p,l);
+                shrink(p,x,l);
+            }
+        }
+    }
+    return 0;
+}
+\end{lstlisting}
 
 \section{计算几何}
 
@@ -932,6 +1317,44 @@ struct chair_man_tree{
     }
 }t;
 \end{lstlisting}
+
+\subsubsection{可撤销并查集}
+\begin{lstlisting}
+struct DSU{
+	int *rnk,*f,top;
+	pii *stk;
+	DSU(int n=N){
+		rnk=new int[n],f=new int[n];
+		stk=new pii[n];
+	}
+	void init(int n){
+	    rep(i,1,n) rnk[i]=0,f[i]=i;
+	    top=0;
+	}
+	int getf(int u){return f[u]==u?u:getf(f[u]);}
+	void unite(int u,int v){
+	    u=getf(u),v=getf(v);
+	    if(u==v) return;
+	    if(rnk[u]>rnk[v]){
+	        stk[++top]={v,rnk[v]};
+	        f[v]=u;
+	    }
+	    else{
+	        stk[++top]={u,rnk[u]};
+	        f[u]=v;
+	        if(rnk[u]==rnk[v]) rnk[v]++;
+	    }
+	}
+	void undo(int pos){
+		while(top>pos){
+		    int u=stk[top].fr,r=stk[top].sc;
+		    f[u]=u,rnk[u]=r;
+		    --top;
+		}
+	}
+}dsu;
+\end{lstlisting}
+
 \subsubsection{ETT维护动态图连通性}
 待补
 \subsection{平衡树系列}
@@ -1040,6 +1463,101 @@ struct fhq_treap{
     }
 } tree;
 \end{lstlisting}
+
+\subsection{KD tree}
+\begin{lstlisting}
+inline void updmin(int &x,int y){x=min(x,y);}
+inline void updmax(int &x,int y){x=max(x,y);}
+int Dim;
+struct KDT{
+    int root;
+    int dim,top=0,tot=0,*rub;
+    struct point{
+        int x[2],w;
+        bool operator<(const point&b){
+            return x[Dim]<b.x[Dim];
+        }
+    }*p;
+    struct node{
+        int mi[2],mx[2],sum=0,ls,rs,sz=0;
+        point p;
+    }*tr;
+    int newnode(){
+        if(top) return rub[top--];
+        else return ++tot;
+    }
+    void up(int u){
+        int l=tr[u].ls,r=tr[u].rs;
+        rep(i,0,1){
+            tr[u].mi[i]=tr[u].mx[i]=tr[u].p.x[i];
+            if(l){
+                updmin(tr[u].mi[i],tr[l].mi[i]);
+                updmax(tr[u].mx[i],tr[l].mx[i]);
+            }
+            if(r){
+                updmin(tr[u].mi[i],tr[r].mi[i]);
+                updmax(tr[u].mx[i],tr[r].mx[i]);
+            }
+        }
+        tr[u].sum=tr[l].sum+tr[r].sum+tr[u].p.w;
+        tr[u].sz=tr[l].sz+tr[r].sz+1;
+    }
+    int build(int l,int r,int dim){
+        if(l>r) return 0;
+        int mid=l+r>>1,u=newnode();
+        Dim=dim; nth_element(p+l,p+mid,p+r+1);
+        tr[u].p=p[mid];
+        tr[u].ls=build(l,mid-1,dim^1),tr[u].rs=build(mid+1,r,dim^1);
+        up(u);
+        return u; 
+    }
+    void pia(int u,int num){//传统?
+        int l=tr[u].ls,r=tr[u].rs;
+        if(l) pia(l,num);
+        p[tr[l].sz+1+num]=tr[u].p,rub[++top]=u;
+        if(r) pia(r,num+1+tr[l].sz);
+    }
+    void balance(int &u,int dim){
+        if(tr[u].sz*0.75<tr[tr[u].ls].sz||
+           tr[u].sz*0.75<tr[tr[u].rs].sz){
+            pia(u,0); u=build(1,tr[u].sz,dim);
+        }
+    }
+    void insert(int &u,point p,int dim){
+        if(!u) {
+            u=newnode(),tr[u].p=p;
+            tr[u].ls=tr[u].rs=0;
+            up(u); return; //待修改
+        }
+        if(p.x[dim]<=tr[u].p.x[dim]) insert(tr[u].ls,p,dim^1);
+        else insert(tr[u].rs,p,dim^1);
+        up(u); balance(u,dim);
+    }
+    int in(int x1,int y1,int x2,int y2,int X1,int Y1,int X2,int Y2){
+        return x1>=X1&&x2<=X2&&y1>=Y1&&y2<=Y2;
+    }//左是否在右内
+    int out(int x1,int y1,int x2,int y2,int X1,int Y1,int X2,int Y2){
+        return x2<X1||x1>X2||y2<Y1||y1>Y2;
+    }//左是否在右外
+    int query(int u,int x1,int y1,int x2,int y2){
+        if(!u) return 0;
+        auto mx=tr[u].mx,mi=tr[u].mi,x=tr[u].p.x;
+        int res=0;
+        if(in(mi[0],mi[1],mx[0],mx[1],x1,y1,x2,y2)) return tr[u].sum;
+        if(out(mi[0],mi[1],mx[0],mx[1],x1,y1,x2,y2)) return 0;
+        if(in(x[0],x[1],x[0],x[1],x1,y1,x2,y2)) res+=tr[u].p.w;
+        res+=query(tr[u].ls,x1,y1,x2,y2)+query(tr[u].rs,x1,y1,x2,y2);
+        return res;
+    }
+    KDT(int maxn=1e6+10){
+        tr=new node[maxn],p=new point[maxn];
+        rub = new int[maxn],root=0;
+    }
+    void insert(int x,int y,int k){insert(root,(point){x,y,k},0);}
+    int query(int x1,int y1,int x2,int y2){return query(root,x1,y1,x2,y2);}
+};
+\end{lstlisting}
+
 \section{字符串}
 
 \subsection{KMP}
@@ -1338,7 +1856,145 @@ int main(){
 }
 \end{lstlisting}
 
+\subsection{广义SAM}
+\begin{lstlisting}
+//广义sam只需要在插入新串时把last设为1
+//其实就是存一下自己的sam
+struct SAM{
+    static const int sigma=26,c0='a';
+    struct Node{
+        int fa=0,to[sigma],len=0;
+        int &operator [] (int x) {return to[x];}
+        Node(){
+            rep(i,0,sigma-1) to[i]=0;
+        }
+    }a[N*2];
+    int last=1,tot=1;
+    int newnode(){
+        a[++tot]=Node(); return tot;
+    }
+
+    ll sz[N*2],t[N*2],val[N*2];
+
+    void insert(int c){
+        bool fl=0; int z;
+        c-=c0;
+        //if(a[last][c]&&a[last].len+1==a[a[last][c]].len) return a[last][c]; 
+        int x=last,next=newnode();
+        sz[next]=1;
+        last=next;
+        a[next].len=a[x].len+1;
+        for(;x&&!a[x][c];x=a[x].fa) a[x][c]=next;
+        if(!x) a[next].fa=1;
+        else{
+            int y=a[x][c];
+            if(a[y].len==a[x].len+1){
+                a[next].fa=y;   
+            }
+            else{
+                if(a[x].len+1==a[next].len) fl=1;
+                z=newnode();
+                a[z]=a[y],a[z].len=a[x].len+1;
+                //sz[z]=1;
+                for(;x&&a[x][c]==y;x=a[x].fa) a[x][c]=z;
+                a[y].fa=a[next].fa=z;
+            }
+        }
+    }
+    bool vis[N*2];
+    void dfs(int u){
+        vis[u]=1;
+        sz[u]=1;
+        rep(i,0,25) if(a[u][i]) {
+            if(!vis[a[u][i]]) dfs(a[u][i]);
+            sz[u]+=sz[a[u][i]];
+        }
+    }
+    void solve(){
+        int n=read();
+        rep(i,1,n){
+            last=1;
+            string s; cin>>s;
+            for(auto c:s) insert(c);
+        }
+        dfs(1);
+        cout<<sz[1]-1<<endl;
+    }
+
+}sam;
+\end{lstlisting}
 \section{其他}
+
+\subsection{三分}
+\begin{lstlisting}
+while(l<r){//类似求导的方式求极值
+	int x=(l+r)/2,y=x+1; //l+(r-l)/2
+	if(f(x)<f(y))l=x+1; else r=y-1; //最大值
+	//if(f(x)<f(y)) r-y-1; else l=x+1; //最小值
+}
+\end{lstlisting}
+
+
+\subsection{数位dp}
+\begin{lstlisting}
+ll dp[20][2][2],bit[20]; //这个[2]表示lz状态，如果lz被使用了的话就需要记录
+ll dfs(int pos,ll s,bool lim=1,bool lz=1){
+	if(pos==-1)return !s; //返回该状态是否符合要求(0或1)
+	ll &x=dp[pos][s][0];
+	if(!lim && x!=-1)return x;
+	ll ans=0;
+	int maxi=lim?bit[pos]:9;
+	if(s){
+		if(maxi>=2) rep(i,0,1)
+			ans+=dfs(pos-1,i,lim&&2==maxi,0);
+	}
+	else{
+		rep(i,0,maxi){
+			if(i==2||i==4) continue;
+			//...//状态转移
+			//if(lz && i==0)...//可能要用lz，其他地方都不用
+			ans+=dfs(pos-1,0,
+				lim && i==maxi,
+				lz && i==0);
+			if(i!=6) ans+=dfs(pos-1,1,lim&&i==maxi,lz&&i==0);
+		}
+	}
+	if(!lim)x=ans; //不限制的时候才做存储 yyds
+	return ans;
+}
+ll calc(ll n){
+	int len=0;
+	while(n)bit[len++]=n%10,n/=10;
+	return dfs(len-1,0)+dfs(len-1,1);
+}
+
+\end{lstlisting}
+
+\subsection{线性基}
+\begin{lstlisting}
+struct basis{//线性基超大常数版  
+	ll p[64];
+	#define B(x,i) ((x>>i)&1)
+	//yyds
+	void init(){ memset(p,0,sizeof(p)); }
+	void add(ll x){
+		dep(i,62,0){
+			if(!B(x,i)) continue;
+			if(!p[i]) {p[i]=x; break;}
+			x^=p[i];
+		}
+	}
+	ll qmx(ll x){
+		dep(i,62,0) if(!B(x,i)&&p[i]) x^=p[i];
+		return x;
+	}
+	ll qmn(ll x){
+		dep(i,62,0) if(B(x,i)&&p[i]) x^=p[i];
+		return x;
+	}
+}b;
+\end{lstlisting}
+
 \subsection{莫队}
 \begin{lstlisting}
 int cnt[MAXN];//记录数字在区间[l,r]内出现的次数
@@ -1498,5 +2154,23 @@ inline double run_time(){
     return 1.0*clock()/CLOCKS_PER_SEC;
 }
 \end{lstlisting}
+
+
+\subsection{替换unorderedset的hash函数}
+\begin{lstlisting}
+struct VectorHash {
+    size_t operator()(const std::vector<int>& v) const {
+        std::hash<int> hasher;
+        size_t seed = 0;
+        for (int i : v) {
+            seed ^= hasher(i) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+        }
+        return seed;
+    }
+};
+unordered_set<vector<int>,VectorHash> st;
+\end{lstlisting}
+
+
 %==============================正文部分==============================%
 \end{document}
