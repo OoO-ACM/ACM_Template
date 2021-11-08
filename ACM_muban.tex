@@ -611,7 +611,10 @@ a^{b\%\phi(p)+\phi(p)} , & \gcd(a,p)\neq 1 , b\geq \phi(p)\\
 (\mod p)
 $$
 \section{图论}
+\subsection{二分图最大匹配}
+用最大流求解，一边连源点流量1，一遍连汇点流量1，连上匹配边流量1，最大流即为最大匹配数
 
+时间复杂度趋近$O(nlogn)$
 \subsection{dijkstra}
 \begin{lstlisting}
 vector<pii> G[N];
@@ -1463,7 +1466,140 @@ struct fhq_treap{
     }
 } tree;
 \end{lstlisting}
+\subsubsection{替罪羊树}
+\begin{lstlisting}
+struct node
+{
+        int l, r, val;
+        int size, fact;
+        bool exsit;
+};
+class tzy_tree
+{
+    public:
+    double alpha=0.75;
+    node tzy[1100000];
+    int root=0,cnt=0;
+    vector<int> tt;
+    inline void newnode(int &now,int v){
+        now=++cnt;
+        tzy[now].val=v;
+        tzy[now].l=tzy[now].r=0;
+        tzy[now].size=tzy[now].fact=tzy[now].exsit=1;
+    }
+    inline bool imbalanced(int now){
+        if(max(tzy[tzy[now].l].size,tzy[tzy[now].r].size)>tzy[now].size*alpha||tzy[now].size-tzy[now].fact>tzy[now].size*0.3)
+            return true;
+        return false;
+    }
+    void zhongxu(int now){
+        if(!now)
+            return;
+        zhongxu(tzy[now].l);
+        if(tzy[now].exsit)
+            tt.push_back(now);
+        zhongxu(tzy[now].r);   
+    }
+    void lift(int l,int r,int &now){
+        if(l==r){
+            now=tt[l];
+            tzy[now].l=tzy[now].r=0;
+            tzy[now].fact=tzy[now].size=1;
+            return;
+        }
+        int m=(l+r)>>1;
+        while(l<m&&tzy[tt[m]].val==tzy[tt[m-1]].val)
+            m--;
+        now=tt[m];
+        if(l<m) lift(l,m-1,tzy[now].l);
+        else tzy[now].l=0;
+        lift(m+1,r,tzy[now].r);
+        tzy[now].size=tzy[tzy[now].l].size+tzy[tzy[now].r].size+1; 
+        tzy[now].fact=tzy[tzy[now].l].fact+tzy[tzy[now].r].fact+1;
+    }
+    void rebuild(int &now){
+        tt.clear();
+        zhongxu(now);
+        if(tt.empty()){
+            now=0;
+            return;
+        }
+        lift(0,tt.size()-1,now);
+    }
+    void update(int now,int end){
+        if(!now)return;
+        if(tzy[end].val<tzy[now].val)
+            update(tzy[now].l,end);
+        else update(tzy[now].r,end);
+        tzy[now].size=tzy[tzy[now].l].size+tzy[tzy[now].r].size+1;
+    }
+    void check(int &now,int end){
+        if(now==end)
+            return;
+        if(imbalanced(now)){
+            rebuild(now);
+            update(root,now);
+            return;
+        }
+        if(tzy[end].val<tzy[now].val)
+            check(tzy[now].l,end);
+        else 
+            check(tzy[now].r,end);
+    }
+    inline void init(){
+        root=1;
+        cnt=0;
+    }
+    void insert(int &now,int val){
 
+        if(!now){
+            newnode(now,val);
+            check(root,now);
+            return;
+        }
+        tzy[now].fact++,tzy[now].size++;
+        if(val<tzy[now].val)
+            insert(tzy[now].l,val);
+        else
+            insert(tzy[now].r,val);
+    }
+    void erase(int now,int val){
+        if(tzy[now].exsit&&tzy[now].val==val){
+            tzy[now].exsit=false;
+            tzy[now].fact--;
+            check(root,now);
+            return;
+        }
+        tzy[now].fact--;
+        if(val<tzy[now].val)
+            erase(tzy[now].l,val);
+        else erase(tzy[now].r,val);
+    }
+    int getrank(int val){
+        int now=root,rk=1;
+        while(now){
+            if(val<=tzy[now].val)
+                now=tzy[now].l;
+            else rk+=tzy[now].exsit+tzy[tzy[now].l].fact,now=tzy[now].r;
+        }
+        return rk;
+    }
+    int getnum(int rk){
+        int now=root;
+        while(now){
+            if(tzy[now].exsit&&tzy[tzy[now].l].fact+tzy[now].exsit==rk)
+                break;
+            else if(tzy[tzy[now].l].fact>=rk){
+                now=tzy[now].l;
+            }else{
+                rk-=tzy[tzy[now].l].fact+tzy[now].exsit;
+                now=tzy[now].r;
+            }
+        }
+        return tzy[now].val;
+    }
+}tree;
+\end{lstlisting}
 \subsection{KD tree}
 \begin{lstlisting}
 inline void updmin(int &x,int y){x=min(x,y);}
