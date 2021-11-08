@@ -273,7 +273,7 @@ int main(){
 }
 \end{lstlisting}
 
-\section{数论}
+\section{数学}
 
 \subsection{欧拉筛}
 $O(n)$筛素数
@@ -610,6 +610,36 @@ a^{b\%\phi(p)+\phi(p)} , & \gcd(a,p)\neq 1 , b\geq \phi(p)\\
 \end{cases}
 (\mod p)
 $$
+
+\subsection{求质数的原根}
+模m乘法群中找到一个数a，以a为生成元造出来的群的大小为$\phi(m)$（对于指数m来说=m-1），则a称为模数m的原根。\\
+原根判定定理:\\
+设$m \geq 3, \gcd(a,m)=1$，
+则 $a$ 是模 $m$ 的原根的充要条件是，
+对于 $\varphi(m)$ 的每个素因数 $p$，
+都有 $a^{\frac{\varphi(m)}{p}}\not\equiv 1\pmod m$。
+\begin{lstlisting}
+vector<int> zyz;
+inline ll get_yg(ll p){
+    zyz.clear();;
+    ll tp = p-1;//phi(p)
+    int sqr = sqrt(tp+1);
+    rep(i,2,sqr){
+        if(tp%i==0)
+            zyz.push_back(i);
+        while(tp%i==0) tp/=i;
+    }
+    if(tp!=1) zyz.push_back(tp);
+    rep(i,2,p){
+        bool flag = 1;
+        for(auto x:zyz)
+            if(qpow(i,(p-1)/x,p)==1){flag = 0;break;}
+        if(flag) return i;
+    }
+    return -1;
+}
+\end{lstlisting}
+
 \section{图论}
 \subsection{二分图最大匹配}
 用最大流求解，一边连源点流量1，一遍连汇点流量1，连上匹配边流量1，最大流即为最大匹配数
@@ -1021,15 +1051,6 @@ point cal(point a,point b,point c){
 }
 \end{lstlisting}
 
-\subsection{欧拉降幂}
-$$
-a^b \equiv \begin{cases}
-a^{b\%\phi(p)} , & \gcd(a,p)=1\\
-a^b , & \gcd(a,p)\neq 1,b<\phi(p)\\
-a^{b\%\phi(p)+\phi(p)} , & \gcd(a,p)\neq 1 , b\geq \phi(p)\\
-\end{cases}
-(\mod p)
-$$
 \subsection{拉格朗日插值}
 \begin{lstlisting}
 namespace polysum {
