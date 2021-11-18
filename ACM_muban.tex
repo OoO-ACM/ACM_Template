@@ -651,6 +651,138 @@ inline ll get_yg(ll p){
 \end{lstlisting}
 
 \section{图论}
+
+\subsection{最大流Dinic}
+编号从0开始可用，复杂度 $O(V^2E)$
+\begin{lstlisting}
+struct FLOW{
+	struct edge{int to,w,nxt;};
+	vector<edge> a; int head[N],cur[N];
+	int n,s,t;
+	queue<int> q; bool inque[N];
+	int dep[N];
+	void ae(int x,int y,int w){ // add edge
+		a.push_back({y,w,head[x]});
+		head[x]=a.size()-1;
+	}
+	bool bfs(){ // get dep[]
+		fill(dep,dep+n,inf); dep[s]=0;
+		copy(head,head+n,cur);
+		q=queue<int>(); q.push(s);
+		while(!q.empty()){
+			int x=q.front(); q.pop(); inque[x]=0;
+			for(int i=head[x];i!=-1;i=a[i].nxt){
+				int p=a[i].to;
+				if(dep[p]>dep[x]+1 && a[i].w){
+					dep[p]=dep[x]+1;
+					if(inque[p]==0){
+						inque[p]=1;
+						q.push(p);
+					}
+				}
+			}
+		}
+		return dep[t]!=inf;
+	}
+	int dfs(int x,int flow){ // extend
+		int now,ans=0;
+		if(x==t)return flow;
+		for(int &i=cur[x];i!=-1;i=a[i].nxt){
+			int p=a[i].to;
+			if(a[i].w && dep[p]==dep[x]+1)
+			if((now=dfs(p,min(flow,a[i].w)))){
+				a[i].w-=now;
+				a[i^1].w+=now;
+				ans+=now,flow-=now;
+				if(flow==0)break;
+			}
+		}
+		return ans;
+	}
+	void init(int _n){
+		n=_n+1; a.clear();
+		fill(head,head+n,-1);
+		fill(inque,inque+n,0);
+	}
+	int solve(int _s,int _t){ // return max flow
+		s=_s,t=_t;
+		int ans=0;
+		while(bfs())ans+=dfs(s,inf);
+		return ans;
+	}
+}flow;
+void add(int x,int y,int w){flow.ae(x,y,w),flow.ae(y,x,0);}
+// 先flow.init(n)，再add添边，最后flow.solve(s,t)
+\end{lstlisting}
+
+\subsection{费用流}
+编号从0开始可用，复杂度 $O(VE^2)$
+\begin{lstlisting}
+struct FLOW{
+	struct edge{int to,w,cost,nxt;};
+	vector<edge> a; int head[N];
+	int n,s,t,totcost;
+	deque<int> q;
+	bool inque[N];
+	int dis[N];
+	struct{int to,e;}pre[N];
+	void ae(int x,int y,int w,int cost){
+		a.push_back((edge){y,w,cost,head[x]});
+		head[x]=a.size()-1;
+	}
+	bool spfa(){
+		fill(dis,dis+n,inf); dis[s]=0;
+		q.assign(1,s);
+		while(!q.empty()){
+			int x=q.front(); q.pop_front();
+			inque[x]=0;
+			for(int i=head[x];i!=-1;i=a[i].nxt){
+				int p=a[i].to;
+				if(dis[p]>dis[x]+a[i].cost && a[i].w){
+					dis[p]=dis[x]+a[i].cost;
+					pre[p]={x,i};
+					if(inque[p]==0){
+						inque[p]=1;
+						if(!q.empty()
+						&& dis[q.front()]<=dis[p])
+							q.push_back(p);
+						else q.push_front(p);
+					}
+				}
+			}
+		}
+		return dis[t]!=inf;
+	}
+	void init(int _n){
+		n=_n+1;
+		a.clear();
+		fill(head,head+n,-1);
+		fill(inque,inque+n,0);
+	}
+	int solve(int _s,int _t){ // 返回最大流，费用存totcost里
+		s=_s,t=_t;
+		int ans=0;
+		totcost=0;
+		while(spfa()){
+			int fl=inf;
+			for(int i=t;i!=s;i=pre[i].to)
+				fl=min(fl,a[pre[i].e].w);
+			for(int i=t;i!=s;i=pre[i].to){
+				a[pre[i].e].w-=fl;
+				a[pre[i].e^1].w+=fl;
+			}
+			totcost+=dis[t]*fl;
+			ans+=fl;
+		}
+		return ans;
+	}
+}flow;
+void add(int x,int y,int w,int cost){
+	flow.ae(x,y,w,cost),flow.ae(y,x,0,-cost);
+}
+// 先 flow.init(n)，再 add 添边，最后 flow.solve(s,t)
+\end{lstlisting}
+
 \subsection{二分图最大匹配}
 用最大流求解，一边连源点流量1，一遍连汇点流量1，连上匹配边流量1，最大流即为最大匹配数
 
