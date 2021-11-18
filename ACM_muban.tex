@@ -652,6 +652,114 @@ inline ll get_yg(ll p){
 
 \section{图论}
 
+\subsection{Tarjan}
+\begin{lstlisting}
+int n;
+vector<int> e[MAXN];//存图 
+int dfn[MAXN],low[MAXN];
+int dfncnt;//dfn自增下标 
+int s[MAXN],tp;//数组模拟栈,tp记录大小 
+bool in[MAXN];//记录该点是否在栈中 
+int scc[MAXN],sc;//节点i所在scc的编号,sc记录有几个强连通 
+int sz[MAXN];//强连通i的大小 
+int indg[MAXN];//记录缩点后的入度（这题才有的 
+
+void tarjan(int u){
+	low[u]=dfn[u]=++dfncnt;//low初始值为自身dfn
+	s[++tp]=u;//推u入栈，从1开始 
+	in[u]=1;//记录u点在栈中 
+	for(auto v:e[u]){//访问到新点的情况 
+		if(!dfn[v]){
+			tarjan(v);
+			low[u] = min(low[u],low[v]);//用low[v}更新low[u] 
+		}
+		else if(in[v])//v被访问过，但是在栈中 
+			low[u] = min(low[u],dfn[v]);
+	}
+	if(dfn[u]==low[u]){//u是连通分量的根节点
+		sc++;//强连通数量++
+		sz[sc] = 0; 
+		while(s[tp]!=u){//u和u之后的点全部出栈 
+			scc[s[tp]] = sc;//这个点包含于第几个强连通
+			sz[sc]++;//u为根的这个强连通的大小 
+			in[s[tp]] = 0;//出栈 
+			tp--; 
+		}
+		scc[u] = sc;//给根节点标，属于第sc个强连通 
+		sz[sc]++;
+		in[u] = 0;
+		tp--;
+	}
+} 
+
+void reset(){
+	tp = sc = dfncnt =0;
+	rep(i,1,n){
+		in[i] = dfn[i] = 0;//low不用清空，sz在之后用到再清空 
+		e[i].clear();
+	}
+}
+
+int main(){
+	cin>>n;
+	reset();
+	int v;
+	rep(u,1,n){
+		while(cin>>v&&v!=0) e[u].push_back(v);
+	} 
+	rep(u,1,n)
+		if(!dfn[u]) tarjan(u);
+	rep(i,1,sc) indg[i] = 0;//这个不包含在tarjan里面，是这题记录入度的 
+	rep(u,1,n){
+		for(auto v:e[u]){
+			if(scc[u]!=scc[v]) indg[scc[v]]++;
+		}
+	}
+	int res = 0;
+	rep(i,1,sc){
+		if(indg[i]==0) res++;
+	}
+	cout<<res<<endl;
+}
+\end{lstlisting}
+
+\subsection{拓扑排序}
+\begin{lstlisting}
+vector<int> e[MAXN];
+int n,m;
+int indg[MAXN];
+
+void solve(){
+	for(int i=1;i<=n;i++) {indg[i]=0;e[i].clear();}
+	for(int i=1,u,v;i<=m;i++){
+		cin>>u>>v;
+		e[u].push_back(v);
+		indg[v]++;
+	}
+	queue<int> q;
+	for(int i=1;i<=n;i++)
+		if(indg[i]==0) q.push(i);//找到入度为0的点
+	vector<int> res;//储存结果的向量
+	int u;
+	while(!q.empty()){//BFS
+		u = q.front();
+		q.pop();
+		res.push_back(u);
+		for(auto v:e[u]){
+			if(--indg[v]==0)q.push(v);
+			//删掉当前点u，点v的入度--
+			//这一步的目的是找到新的入度为0的节点，推入队列Q
+		}
+	}
+	if(res.size()==n){//如果这个图无环的话，说明可以进行拓扑排序
+		for(int i=0;i<n;i++){//输出结果
+			cout<<res[i]<<' ';
+		}
+		cout<<endl;
+	}
+}
+\end{lstlisting}
+
 \subsection{最大流Dinic}
 编号从0开始可用，复杂度 $O(V^2E)$
 \begin{lstlisting}
@@ -1202,6 +1310,52 @@ bool match(int s){
 
 \section{计算几何}
 
+\subsection{基础点和线}
+\begin{lstlisting}
+struct point{
+    double x,y;
+    point(double _x=0,double _y=0){ x=_x,y=_y; }
+    point operator+ (const point& a) const{ return point(x+a.x,y+a.y); }
+    point operator- (const point& a) const{ return point(x-a.x,y-a.y); }
+    point operator* (double a) const{ return point(x*a,y*a); }
+}; // 点
+struct line{
+    point s,e;
+    line(point a,point b){ s=a,e=b; }
+    line(){}
+}; // 线
+double getdis(point a, point b){
+    double xx=a.x-b.x,yy=a.y-b.y;
+    return sqrt(xx*xx+yy*yy);
+} // 两点距离
+double multi(point a,point b,point c){
+    double xa,ya,xb,yb;
+    xa=b.x-a.x; ya=b.y-a.y;
+    xb=c.x-b.x; yb=c.y-b.y;
+    return xa*xb+ya*yb;
+} // 点乘
+double cross(point a,point b,point c){
+    double xa,ya,xb,yb;
+    xa=b.x-a.x; ya=b.y-a.y;
+    xb=c.x-a.x; yb=c.y-a.y;
+    return xa*yb-xb*ya;
+} // 叉乘
+int judgec(line a,line b){
+    if (max(a.s.x,a.e.x)>=min(b.s.x,b.e.x) &&
+        max(a.s.y,a.e.y)>=min(b.s.y,b.e.y) &&
+        max(b.s.x,b.e.x)>=min(a.s.x,a.e.x) &&
+        max(b.s.y,b.e.y)>=min(a.s.y,a.e.y) &&
+        cross(a.s,b.s,b.e)*cross(a.e,b.s,b.e)<=0 
+        && cross(b.s,a.s,a.e)*cross(b.e,a.s,a.e)<=0
+        ) return 1;
+    else return 0;
+} // 判断线段是否相交
+point getpoi(point a,point b,point c,point d){
+    double u=cross(a,b,c),v=cross(b,a,d);
+    return point((c.x*v+d.x*u)/(u+v),(c.y*v+d.y*u)/(u+v));
+} // 求交点
+\end{lstlisting}
+
 \subsection{三点求圆心}
 \begin{lstlisting}
 struct point{
@@ -1322,6 +1476,104 @@ LL qpolysum(LL R, LL n, LL *a, LL m) { /// a[0].. a[m] \sum_{i=0}^{n-1} a[i]*R^i
 }
 \end{lstlisting}
 \section{数据结构}
+
+\subsection{树背包}
+\begin{lstlisting}
+int dp[MAXN][MAXN],val[MAXN];
+void dfs(int now){
+	dp[now][1] = val[now];//肯定要选定自己
+	for(int i = head[now];i!=-1;i=edges[i].nxt){
+		int v = edges[i].v;
+		dfs(v);
+		//分组背包
+		repb(j,m,1){//当前u背包容量
+			rep(k,0,j-1){//从v儿子里拿几个
+				dp[now][j]=max(dp[now][j],dp[now][j-k]+dp[v][k]);
+				//状态转移
+			}
+		}
+	}
+}
+\end{lstlisting}
+
+\subsection{树上启发式合并}
+通过保留重儿子贡献降低复杂度
+\begin{lstlisting}
+const int MAXN = 1e5+5;
+const int MAXM = 1e5+5;
+int sz[MAXN],son[MAXN];//子树大小和重儿子
+//int ans[MAXN];//存最多的颜色和编号和,这题没必要
+int c[MAXN];//每个点的颜色
+int cnt[MAXM];//存每种颜色的点数
+ll bhh[MAXN],bsum;//题目要求颜色的编号和
+int maxx;//临时变量,用来找最大颜色数量的
+int n;
+vector<int> e[MAXN];
+void init(int now,int pre){//预处理找重儿子
+    sz[now] = 1;son[now] = -1;
+    for(auto v:e[now]){
+        if(v==pre) continue;
+        init(v,now);
+        sz[now]+=sz[v];
+        if(son[now]==-1||sz[v]>sz[son[now]]) son[now]=v;
+    }
+}
+void dfs1(int now,int pre,int val,int rt){//rt是dfs里面当前在统计的子树根
+//val=1的时候加上子节点的贡献,而-1时是dfs里面opt=1(代表轻儿子)时删去贡献
+    cnt[c[now]]+=val;
+    if(val==1){
+        if(cnt[c[now]]>maxx) maxx=cnt[c[now]],bsum=c[now];
+        else if(cnt[c[now]]==maxx) bsum+=c[now];
+    }
+    //遍历子节点的时候看到什么颜色就检查这个颜色
+    for(auto v:e[now]) if(v!=pre)dfs1(v,now,val,rt);
+}
+void dfs(int now,int pre,int opt){//opt为1代表要清空
+    for(auto v:e[now]){
+        if(v!=son[now]&&v!=pre) dfs(v,now,1);//先轻儿子,需要删去
+    }
+    if(son[now]!=-1) dfs(son[now],now,0);//处理重儿子
+    //此时计算轻儿子的贡献,重儿子的在cnt里面祖传上来了
+    for(auto v:e[now]){
+        if(v!=pre&&v!=son[now]) dfs1(v,now,1,now);//统计轻儿子上的结果
+    }
+    cnt[c[now]]++;//也要加上当前节点
+    if(cnt[c[now]]>maxx) maxx=cnt[c[now]],bsum=c[now];
+    //这里我一开始用的cnt[c[now]]>cnt[ans[now]],但是c[now]和ans[rt]相同时出问题
+    else if(cnt[c[now]]==maxx) bsum+=c[now];
+    bhh[now] = bsum;//记录结果
+    //减去轻儿子的贡献
+    if(opt){
+        cnt[c[now]]--;
+        for(auto v:e[now])
+            if(v!=pre) dfs1(v,now,-1,now);
+        maxx = bsum = 0;//删去轻儿子这颗子树对bsum和maxx的贡献
+    }
+}
+int rt = 1;//题目默认1为根节点
+int main(){
+    cin>>n;
+    rep(i,1,n) cin>>c[i];
+    int u,v;
+    rep(i,1,n-1){
+        cin>>u>>v;
+        e[u].push_back(v);
+        e[v].push_back(u);
+    }
+    init(rt,-1);
+    dfs(rt,-1,1);
+    rep(i,1,n){
+        cout<<bhh[i];
+        if(i!=n) cout<<' ';  
+    }
+    cout<<endl;
+}
+//没有修改只有查询的树形问题
+//且询问以所有节点为根子树（即对每个节点为根的子树都要询问）。
+//洛谷CF600E Lomsat gelral
+//https://www.luogu.com.cn/problem/CF600E
+\end{lstlisting}
+
 \subsection{扫描线}
 扫描线是离散化后，使用类似权值线段树来维护每个截面上的线段长度。\\
 通过把二维平面上的四边形拆分成入边和出边两段，在遇到边的时候对对应的区间进行区间加/减即可。\\
@@ -2255,6 +2507,53 @@ struct SAM{
 }sam;
 \end{lstlisting}
 \section{其他}
+
+\subsection{FFT}
+\begin{lstlisting}
+const double Pi = acos(-1.0);
+struct cplx{//手写负数complex用起来会更快
+    double x,y;
+    cplx(double x=0,double y=0):x(x),y(y){}
+    friend cplx operator + (cplx a,cplx b){return cplx(a.x+b.x,a.y+b.y);}
+    friend cplx operator - (cplx a,cplx b){return cplx(a.x-b.x,a.y-b.y);}
+    friend cplx operator * (cplx a,cplx b){return cplx(a.x*b.x-a.y*b.y,a.x*b.y+a.y*b.x);}
+}a[MAXN],b[MAXN];
+void FFT(int limit,cplx *a,int type){//limit记录项数
+    if(limit==1) return;//只有一个常数项结束递归(即只剩下0次的)
+    cplx a1[limit>>1],a2[limit>>1];//按照奇偶分组
+    for(int i=0;i<limit;i+=2)
+        a1[i>>1] = a[i],a2[i>>1] = a[i+1];
+    FFT(limit>>1,a1,type);
+    FFT(limit>>1,a2,type);
+    cplx Wn(cos(2*Pi/limit),type*sin(2*Pi/limit));//单位根
+    //这里type挺重要的,反变换的时候用-1,因为是-k
+    cplx w(1,0);//一会儿算单位根幂的时候用w存
+    cplx tmp;
+    for(int i=0;i<(limit>>1);i++,w=w*Wn){//w相当于公式中的w_n^k
+        tmp = w*a2[i];//蝴蝶操作
+        a[i]=a1[i]+tmp;//偶
+        a[i+(limit>>1)]=a1[i]-tmp;//O(1)算另外一部分
+    }
+}
+int main(){
+    int n=read(),m=read();
+    rep(i,0,n) a[i].x=read();
+    rep(i,0,m) b[i].x=read();
+    int limit = 1;
+    while(limit<=n+m) limit<<=1;//这里非常精髓
+    //把长度补到2的幂，这样就不用考虑%2余数的情况
+    //而且不必担心高次项的系数，因为默认为0
+    FFT(limit,a,1);
+    FFT(limit,b,1);
+    //1表示FFT，-1则是反变换   
+    rep(i,0,limit) a[i] = a[i]*b[i];//转换为点值后直接相乘
+    FFT(limit,a,-1);//现在变回去
+    rep(i,0,n+m) printf("%d ",(int)(a[i].x/limit+0.5));//还要除以n的
+    printf("\n");
+}
+//P3803 【模板】多项式乘法（FFT）
+//https://www.luogu.com.cn/problem/P3803
+\end{lstlisting}
 
 \subsection{基础母函数求方案数}
 \begin{lstlisting}
