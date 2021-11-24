@@ -274,6 +274,68 @@ int main(){
 }
 \end{lstlisting}
 \newpage
+
+\section{博弈}
+\subsection{SG函数}
+\begin{lstlisting}
+//sg板子
+int sg[MAXN];
+bool vis[MAXN];
+inline void get_sg(){
+    int j;
+    rep(i,0,MAXN-1){
+        memset(vis,0,sizeof(vis));
+        rep(j,1,cnt){//转移
+            if(i-fb[j]<0) break;
+            vis[sg[i-fb[j]]] = 1;
+        }
+        //找mex
+        rep(j,0,MAXN-1)//找后继中最小未出现的数字
+            if(!vis[j]){sg[i]=j;break;}
+    }
+}
+\end{lstlisting}
+
+\subsection{阶梯Nim}
+n个位置，每个位置上有ai个石子，两个人轮流操作，操作步骤是：选择i位置上的任意数量石子，移动到下一级阶梯(i-1)位置。直到0级阶梯不能移动。谁最后无法操作谁输。\par
+问题等价于，求位置为奇数的ai的异或和，若异或和等于0，则先手必败，否则先手必胜。
+
+\subsection{威佐夫博弈}
+普通的威佐夫博弈：有2堆石子，每人每次可以拿走任意一堆中任意数量的石子或在两堆石子中拿走相同数量的石子，不能拿的人输。\par
+$\frac{1}{\alpha}+\frac{1}{\alpha+1}=1$计算解得$\alpha =\frac{\sqrt{5}+1}{2}$\par
+第n个奇异局势(必败态)\par
+$$a[n]=\lfloor n*\frac{\sqrt{5}+1}{2}\rfloor,b[n]=a[n]+n;$$
+扩展威佐夫博弈：从一堆拿走x，另一堆拿走y，满足$|x-y|\leq k$。\par
+通过这条式子用k解α$\frac{1}{\alpha}+\frac{1}{\alpha +k+1}=1$
+因此第n个奇异局势为
+$$a[n]=\lfloor n*\alpha \rfloor,b[n]=a[n]+n*(k+1);$$
+当初是在多校写的这题，这个$\alpha$可以通过二分求，之后也用二分去找n。
+\begin{lstlisting}
+void solve(){
+    cin>>a>>b>>k;
+    if(a>b) swap(a,b);
+    double l = 1,r = 2;//alpha的区间应该是在1和2之间的 
+    double now=0,mid;
+    while(abs(now-1.0)>eps){//第一次二分寻找合适的alpha 
+        mid = (l+r)/2;
+        now = cal(k,mid);
+        if(now>1.0) l = mid;
+        else r = mid;
+    }
+    double alpha = mid;//通过二分计算得到alpha 
+    int lb = 0,rb = 5e7+5;
+    int midd;
+    while(lb+1<rb){//第二次二分求a对应第几个二元组 
+        midd = (lb+rb)/2;
+        if(floor(midd*alpha)>a) rb = midd;
+        else lb = midd;
+    } 
+    if(floor(lb*alpha)==a&&a+(k+1)*lb==b) cout<<0<<endl;
+    else cout<<1<<endl;
+}
+\end{lstlisting}
+
+\newpage
 \section{数学}
 
 \subsection{欧拉筛}
