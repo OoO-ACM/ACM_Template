@@ -337,6 +337,31 @@ void solve(){
 
 \newpage
 \section{数学}
+\subsection{高次期望DP}
+
+简言之，就是高次的期望值需要从低次的推得，如求$X^3$的期望，则需要拆分
+$$x^2 = ((x-1) + 1)^2 = (x-1)^2 + 2(x-1) + 1$$\par
+转为递推式
+\begin{lstlisting}
+b[i] = b[i-1] + 2*a[i] + 1;
+c[i] = c[i-1] + 3*b[i-1] + 3*a[i-1] + 1
+\end{lstlisting}
+\par
+这题是有n次游戏，第i次成功概率为p[x],连续X次成功会得到$X^3$分，问期望分数\\
+\begin{lstlisting}
+inline void solve(){
+    cin>>n;
+    rep(i,1,n) cin>>p[i];
+    a[0]=b[0]=f[0]=0;
+    rep(i,1,n)
+        a[i] = (a[i-1]+1)*p[i];
+    rep(i,1,n)
+        b[i] = (b[i-1]+2*a[i-1]+1)*p[i];
+    rep(i,1,n)
+        f[i] = (f[i-1]+3*b[i-1]+3*a[i-1]+1)*p[i] + f[i-1]*(1-p[i]);
+    printf("%.1lf\n",f[n]);
+}
+\end{lstlisting}
 
 \subsection{错排公式}
 每个数字都不在自己位置上的排列数\par
@@ -2880,6 +2905,85 @@ struct SAM{
 
 }sam;
 \end{lstlisting}
+
+\subsection{trie离线构造广义SAM}
+\begin{lstlisting}
+
+int SAM_extend(char c,int last){
+    int cur = sz++;
+    sta[cur].len = sta[last].len+1;
+    int p = last;
+    //沿着last的link添加到c的转移，直到找到已经有c转移的状态p
+    while(p!=-1&&!sta[p].nxt.count(c)){
+        sta[p].nxt[c] = cur;
+        p = sta[p].link;
+    }
+    if(p==-1) sta[cur].link = 0;//情况1,没有符合的p
+    else{
+        int q = sta[p].nxt[c];
+        if(sta[q].len==sta[p].len+1)//情况2,稳定的转移(lenq=lenp+1,前面没有增加)
+            sta[cur].link = q;
+        else{//情况3,把q的lenp+1的部分拿出来(clone),p到clone的转移是稳定的
+            int clone = sz++;
+            sta[clone].len = sta[p].len+1;
+            sta[clone].nxt = sta[q].nxt;
+            sta[clone].link = sta[q].link;
+            while(p!=-1 && sta[p].nxt[c]==q){//把向q的转移指向clone
+                sta[p].nxt[c]=clone;
+                p=sta[p].link;
+            }
+            sta[q].link = sta[cur].link = clone;//clone是q的后缀,故linkq=clone
+        }
+    }
+    return cur;//sta[last]包含目前处理的整个前缀!
+}
+
+//trie tree================================
+map<char,int> tnxt[MAXN];
+int tcnt = 1;
+int poss[MAXN];//trie上点在sam上的位置
+inline void trie_ins(string ss){
+    int siz = ss.size();
+    int now = 1;//rt
+    rep(i,0,siz-1){
+        if(tnxt[now][ss[i]]) now = tnxt[now][ss[i]];
+        else tnxt[now][ss[i]] = ++tcnt,now = tcnt;
+    }
+}
+#define ft first
+#define sd second
+//dfs on trie==============================
+void dfs_on_trie(int pos){
+    for(auto px:tnxt[pos]){
+        poss[px.sd] = SAM_extend(px.ft,poss[pos]);
+        dfs_on_trie(px.sd);
+    }
+}
+
+ll res = 0;
+
+int n;
+inline void solve(){
+    cin>>n;//字符数量
+    string ts;
+    rep(i,1,n){
+        cin>>ts;
+        trie_ins(ts);
+    }
+    sta[0].len = 0;sta[0].link = -1;//虚拟状态t0
+    res = 0;
+    poss[1] = 0;
+    dfs_on_trie(1);//trie树建SAM
+    // cout<<"sz = "<<sz<<endl;
+    rep(i,1,sz-1){ 
+        // cout<<sta[i].len<<'-'<<sta[sta[i].link].len<<endl;
+        // cout<<"link["<<i<<"] = "<<sta[i].link<<endl;
+        res += sta[i].len - sta[sta[i].link].len;
+    }
+    cout<<res<<endl;
+}
+\end{lstlisting}
+
 \section{其他}
 \subsection{模拟退火}
 \begin{lstlisting}
