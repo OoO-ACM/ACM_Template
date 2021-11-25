@@ -76,12 +76,12 @@
 \end{figure}
 \end{titlepage}
 
-\newpage
+ 
 \pagestyle{empty}
 \renewcommand{\contentsname}{目录}
 \tableofcontents
-\newpage\clearpage
-\newpage
+ \clearpage
+ 
 \pagestyle{fancy}
 \setcounter{page}{1}   %new page
 %==============================标题和目录==============================%
@@ -192,7 +192,7 @@ signed main()
 	return 0;
 }
 \end{lstlisting}
-\newpage
+ 
 \subsection{头文件(REXWind)}
 \begin{lstlisting}
 #include<iostream>
@@ -234,7 +234,7 @@ int main(){
 	while(z--) solve();
 }
 \end{lstlisting}
-\newpage
+ 
 \subsection{头文件(Dallby)}
 \begin{lstlisting}
 #include<bits/stdc++.h>
@@ -273,7 +273,7 @@ int main(){
     return 0;
 }
 \end{lstlisting}
-\newpage
+ 
 
 \section{博弈}
 \subsection{SG函数}
@@ -335,7 +335,7 @@ void solve(){
 }
 \end{lstlisting}
 
-\newpage
+ 
 \section{数学}
 
 \subsection{错排公式}
@@ -455,7 +455,7 @@ void FFT(int n,int m,CP *F,CP *G){
     DFT(F,-1);
 }
 \end{lstlisting}
-\newpage
+ 
 \subsubsection{NTT快速数论变换}
 \begin{lstlisting}
 const int SIZE=(1<<21)+5;
@@ -716,7 +716,7 @@ inline ll get_yg(ll p){
     return -1;
 }
 \end{lstlisting}
-\newpage
+ 
 \section{图论}
 \subsection{树上倍增求LCA}
 \begin{lstlisting}
@@ -1851,7 +1851,283 @@ int main(){
     cout<<res<<endl;
 }
 \end{lstlisting}
+\subsection{树链剖分}
+\begin{lstlisting}
+#include<bits/stdc++.h>
+using namespace std;
+#define ll long long
+const int MAXN = 1e5+5;
 
+ll ans;
+int da[MAXN];//记录dfn序上的各点数值用来初始化线段树
+int n,m,rt,p;//节点数，询问数，根，模数 
+
+struct tree{
+	int sum;
+	int lazy;
+};
+
+struct St{//线段树 
+	tree t[MAXN<<2];
+	void pushup(int pos){ 
+		t[pos].sum=(t[pos<<1].sum+t[pos<<1|1].sum) %p;
+		return;
+	}
+	void pushdown(int l,int r,int pos){
+		if(!t[pos].lazy) return;
+		int mid = (l+r)>>1;
+		t[pos<<1].sum += t[pos].lazy*(mid-l+1);
+		t[pos<<1].sum %= p;//取模 
+		t[pos<<1|1].sum += t[pos].lazy*(r-(mid+1)+1);
+		t[pos<<1|1].sum %= p;//取模 
+		t[pos<<1].lazy += t[pos].lazy;
+		t[pos<<1].lazy %= p;//取模 
+		t[pos<<1|1].lazy += t[pos].lazy;
+		t[pos<<1|1].lazy %= p;//取模 
+		t[pos].lazy = 0; 
+	}
+	void build(int l,int r,int pos){ 
+		t[pos].sum = t[pos].lazy = 0;
+		if(l==r){
+			t[pos].sum = da[l];
+			return;
+		}
+		int mid = (l+r)>>1;
+		build(l,mid,pos<<1);
+		build(mid+1,r,pos<<1|1);
+		pushup(pos);
+	}
+	void update(int L,int R,int l,int r,int pos,int v){
+		if(L<=l&&r<=R){
+			t[pos].sum += v*(r-l+1);
+			t[pos].lazy += v;
+			t[pos].lazy %= p;//取模 
+			return;
+		}
+		if(r<L||l>R) return;
+		pushdown(l,r,pos);
+		int mid = (l+r)>>1;
+		update(L,R,l,mid,pos<<1,v);
+		update(L,R,mid+1,r,pos<<1|1,v);
+		pushup(pos);
+	}
+	void query(int L,int R,int l,int r,int pos){
+		if(L<=l&&r<=R){
+			ans += t[pos].sum;
+			ans%=p;//取模 
+			return;
+		}
+		if(r<L||R<l) return;
+		pushdown(l,r,pos);
+		int mid = (l+r)>>1;
+		query(L,R,l,mid,pos<<1);
+		query(L,R,mid+1,r,pos<<1|1);
+		return;
+	}
+	//查询和修改，为了简化参数，我又写了两个 
+	ll tquery(int L,int R){
+		ans = 0;
+		query(L,R,1,n,1);
+		return ans; 	
+	}
+	void tupdate(int L,int R,int v){
+		update(L,R,1,n,1,v);
+	} 
+};
+//树结构 
+vector<int> e[MAXN];//记录边
+int a[MAXN];//记录编号对应节点的初始数值
+
+//树剖部分
+St segt;
+int si[MAXN],dep[MAXN],fa[MAXN],rem[MAXN],dfn[MAXN],top[MAXN];
+int dfn_num;
+
+void dfs1(int x,int faa){//预处理出fa,dep,si,rem
+	int ma = 0;//用来x的重儿子，记录最大的size
+	si[x] = 1;
+	for(auto v:e[x]){
+		if(v==faa) continue;//跳过父亲节点 
+		dep[v] = dep[x]+1;//更新儿子的dep 
+		dfs1(v,x);
+		si[x] += si[v];//x的size加上当前儿子的size
+		fa[v] = x;//标记v的父节点为x 
+		if(si[v]>ma){
+			ma = si[v];
+			rem[x] = v;//记录重儿子 
+		} 
+	}
+} 
+
+void dfs2(int x,int faa){//预处理出dfn，top
+	if(rem[faa]==x) top[x] = top[faa];//同一条重链同一个top 
+	else top[x] = x;//否则为重链头
+	dfn[x] = ++dfn_num;//更新树剖序，同时下标自增
+	da[dfn_num] = a[x];
+	if(rem[x]) dfs2(rem[x],x);//优先遍历重儿子
+	for(auto v:e[x]){
+		if(v==faa) continue;
+		if(v==rem[x]) continue;//重儿子之前已经遍历过了
+		dfs2(v,x); 
+	} 
+}
+
+inline ll cal(int L,int R){
+	return segt.tquery(L,R);
+}
+
+void init(){//初始化
+	dfn_num=0;
+	dfs1(rt,0);
+	dfs2(rt,0);
+	segt.build(1,n,1);//这里通过da来初始化线段树 
+}
+
+ll query(int x,int y){
+	ll res=0;
+	while(top[x]!=top[y]){//跳到同一条重链 
+		if(dep[top[x]]<dep[top[y]])swap(x,y);
+		//重链深度更大的点优先往上跳
+		res += cal(dfn[top[x]],dfn[x]);//算上这条重链的 
+		res%=p;//取模 
+		x = fa[top[x]];//跳到重链头的父节点上 
+	}
+	//跳出这个循环时，xy已经在同一个重链上了
+	res += cal(min(dfn[x],dfn[y]),max(dfn[x],dfn[y]));
+	res%=p;//取模 
+	//xy不确定顺序对不对，所以取minmax 
+	return res;
+}
+
+void update(int x,int y,int v){
+	ll res=0;
+	while(top[x]!=top[y]){//跳到同一条重链 
+		if(dep[top[x]]<dep[top[y]])swap(x,y);
+		//重链深度更大的点优先往上跳
+		segt.tupdate(dfn[top[x]],dfn[x],v);//更新数值 
+		x = fa[top[x]];//跳到重链头的父节点上 
+	}
+	//跳出这个循环时，xy已经在同一个重链上了
+	segt.tupdate(min(dfn[x],dfn[y]),max(dfn[x],dfn[y]),v);
+	//xy不确定顺序对不对，所以取minmax
+}
+int getlca(int u,int v){
+    while(top[u]!=top[v]){
+        if(dep[top[u]]<dep[top[v]])swap(u,v);
+        u = fa[top[u]];
+    }
+    if(dep[u]>dep[v])swap(u,v);
+    return u;
+}
+int main(){
+	cin>>n>>m>>rt>>p;//节点数，操作数，根节点序号，模数
+	for(int i=1;i<=n;i++){
+		cin>>a[i];//记录初始数值 
+		a[i] = a[i]%p;
+	} 
+	int x,y;
+	for(int i=1;i<=n;i++) e[i].clear();
+	for(int i=1;i<n;i++){
+		cin>>x>>y;
+		e[x].push_back(y);
+		e[y].push_back(x);
+	}
+	init();
+	int v;
+	int typ;
+	while(m--){
+		cin>>typ;
+		if(typ==1){//简单路径上修改 
+			cin>>x>>y>>v;
+			update(x,y,v);
+		}
+		else if(typ==2){//简单路径上查询 
+			cin>>x>>y;
+			cout<<query(x,y)<<endl;
+		}
+		else if(typ==3){//子树上修改 
+			cin>>x>>v;
+			segt.tupdate(dfn[x],dfn[x]+si[x]-1,v);
+		}
+		else if(typ==4){//子树上查询 
+			cin>>x;
+			cout<<segt.tquery(dfn[x],dfn[x]+si[x]-1)<<endl;
+		}
+	}
+} 
+
+\end{lstlisting}
+\subsection{可持久化线段树}
+区间第$k$大
+\begin{lstlisting}
+int n,m;
+int date[200010];
+int lsh[200010];
+int root[200010];
+int lk[200010];
+map<int,int> rvs;
+struct chair_man_tree{
+    struct node{
+        int v;
+        int lson,rson;
+    }tree[200010<<5];
+    int tail=0;
+    inline int addnode(int pos){
+        tree[++tail]=tree[pos];
+        return tail;
+    }
+    int build(int l,int r){
+        int now=++tail;
+          tree[now].v=0;
+        if(l==r){
+            return now;
+        }
+        int mid=(l+r)>>1;
+        tree[now].lson=build(l,mid);
+        tree[now].rson=build(mid+1,r);
+        return now;
+    }
+    int update(int pos,int l,int r,int x){
+        int now=addnode(pos);
+        tree[now].v++;
+        if(l<r){
+            int  mid=(l+r)>>1;
+            if(x<=mid)tree[now].lson=update(tree[pos].lson,l,mid,x);
+            else tree[now].rson=update(tree[pos].rson,mid+1,r,x);
+        }
+        return now;
+    }
+    int query(int u,int v,int l,int r,int k){
+        if(l==r)
+        return l;
+        int x=tree[tree[v].lson].v-tree[tree[u].lson].v;
+        int mid=(l+r)>>1;
+        if(x>=k)
+            return query(tree[u].lson,tree[v].lson,l,mid,k);
+        else return query(tree[u].rson,tree[v].rson,mid+1,r,k-x);
+    }
+}a;
+void work()
+{ 
+    rd(n),rd(m);
+    for(int i=1;i<=n;i++)
+    rd(date[i]),lsh[i]=date[i];
+    sort(lsh+1,lsh+ n + 1);
+    int cnt=0;
+    cnt=unique(lsh+1,lsh+n+1)- lsh-1;
+    for(int i=1;i<=cnt;i++)
+        rvs[lsh[i]]=i;
+    a.build(1,cnt);
+    for(int i=1;i<=n;i++){
+        root[i]=a.update(root[i-1],1,cnt,rvs[date[i]]);
+    }
+    int ll,rr,kk;
+    for(int i=0;i<m;i++){
+        rd(ll), rd(rr), rd(kk);
+        printf("%d\n",lsh[a.query(root[ll-1],root[rr],1,cnt,kk)]);
+    }
+}
+\end{lstlisting}
 \subsection{并查集系列}
 \subsubsection{普通并查集}
 带路径压缩,$O(1)$复杂度
@@ -2221,6 +2497,159 @@ class tzy_tree
         return tzy[now].val;
     }
 }tree;
+\end{lstlisting}
+\subsection{splay}
+\begin{lstlisting}
+#include<bits/stdc++.h>
+using namespace std;
+
+template<class T>inline void read(T &x){x=0;char o,f=1;while(o=getchar(),o<48)if(o==45)f=-f;do x=(x<<3)+(x<<1)+(o^48);while(o=getchar(),o>47);x*=f;}
+//int cansel_sync=(ios::sync_with_stdio(0),cin.tie(0),0);
+#define ll long long
+#define rep(i,a,b) for(int i=(a);i<=(b);i++)
+#define repb(i,a,b) for(int i=(a);i>=b;i--)
+#define INF 0x3f3f3f3f
+#define cendl printf("\n")
+ll gcd(ll a,ll b){ while(b^=a^=b^=a%=b); return a; }
+//#define INF 0x7fffffff
+
+const int MAXN = 5e5+5;
+int root,tot,n;
+
+struct Node{
+    int ch[2];//左右儿子
+    int val;//值
+    int fa;//父节点
+    int size;//子树大小
+    int cnt;//计数 
+}t[MAXN];
+
+inline void pushup(int x){//维护节点的size 
+	t[x].size = t[x].cnt;//自己重复的次数先累计
+	if(t[x].ch[0]) t[x].size+=t[t[x].ch[0]].size;
+	if(t[x].ch[1]) t[x].size+=t[t[x].ch[1]].size;
+	//如果有儿子,把儿子的size加到自己
+	//同线段树的pushup必须先处理儿子再处理父节点
+}
+
+void rotate(int x){//旋转操作
+	int y=t[x].fa, z=t[y].fa;
+	int k=(t[y].ch[1]==x);//x是y的左还是右儿子 
+	t[z].ch[t[z].ch[1]==y] = x;//x换到y原来在的位置
+	t[x].fa = z; 
+	t[y].ch[k] = t[x].ch[k^1];//y顶下来x的儿子，放在x原来对y的位置 
+	t[t[x].ch[k^1]].fa = y;
+	t[x].ch[k^1] = y;//y换到 x原来在y的 相对的 位置
+	t[y].fa = x;
+	pushup(y),pushup(x);//更新size,因为y是儿子,所以先y 
+}//这里的异或是用来调整0和1(左右儿子) 
+
+inline void splay(int x,int goal){//找到x并把x旋转为goal的儿子根节点 
+	while(t[x].fa!=goal){//x一直旋转到成为goal的儿子
+		int y=t[x].fa,z=t[y].fa; 
+		if(z!=goal)//如果y不是根节点,分两类讨论 
+			(t[z].ch[0]==x)^(t[y].ch[0]==y)?rotate(x):rotate(y);
+			//x和y分别是y和z的同一侧儿子,先转y再转x;不同则先转x转两次 
+		rotate(x);//无论三种情况中的哪一种都要最后转x 
+	}
+	if(goal==0) root=x;//若goal是0,根节点更新为x
+}
+
+inline void find(int x){//查找x的位置,并旋转x到根节点,类似二分,O(logn) 
+	int u = root;
+	if(!u) return;//树是空的情况
+	while(t[u].ch[x>t[u].val]&&x!=t[u].val)//找到x,不一定找得到
+		u = t[u].ch[x>t[u].val];//左儿子小，右儿子大 
+	splay(u,0);//当前位置旋转到根节点.根节点的fa存0
+}
+
+inline void insert(int x){//类似find,如果插入的数已经存在,可以在找到的节点计数 
+	int u = root,fu = 0;//当前位置u,u的爸爸fu 
+	while(u&&t[u].val!=x){//找合适位置,u找到空的地方也会停止
+		fu = u;
+		u = t[u].ch[x>t[u].val];
+	}
+	if(u) t[u].cnt++;//已有这个数字的情况,计数 
+	else{
+		u = ++tot;//节点总数tot+1
+		if(fu)//这时候fu是上一个u即新插入u的父节点,如果父节点不是0
+			t[fu].ch[x>t[fu].val]=u;
+		t[u].ch[0] = t[u].ch[1] = 0;//这个新节点没儿子
+		t[u].fa = fu;//父亲
+		t[u].val = x;//数值
+		t[u].cnt = 1;//计数
+		t[u].size  = 1;//大小
+	}
+	splay(u,0);
+}
+
+inline int Next(int x,int f){
+	find(x); 
+	int u=root;//根节点，此时x的父节点(存在的话)就是根节点 
+	//这里sls回答了我的疑问
+	//"splay中不一定有x这个节点,那么它splay到根的就直接可以满足了"
+	//"如果有这个点的话就要在splay上再找一波(因为当前的根就是x这个点)"
+	if(t[u].val>x&&f)return u;//如果当前节点的值大于x并且要查找的是后继
+    if(t[u].val<x&&!f)return u;//如果当前节点的值小于x并且要查找的是前驱 
+    //上面两个是x不在splay中的情况
+	u = t[u].ch[f];//后继在根右边找,前驱在左边找
+	while(t[u].ch[f^1]) u = t[u].ch[f^1];//左半边要往右跳找最大的,右半边往左跳 
+	return u;
+}
+
+inline void Delete(int x){//删除x 
+	int last = Next(x,0);//查找x的前驱
+	int next = Next(x,1);//找x的后继
+	splay(last,0);splay(next,last);//前驱节点转到根节点,后继转到根的儿子上
+	//操作完之后.后继是前驱的右儿子,x是前驱的左儿子,而且x是叶子节点 
+	int del = t[next].ch[0];//后继的左儿子x
+	if(t[del].cnt>1){
+		t[del].cnt--;//如果有多个x,则x的计数减少一个
+		splay(del,0);//这个splay还重新pushup计算了del的子树
+	}
+	else
+		t[next].ch[0]=0;//因为是左儿子是叶子节点,直接丢掉 
+}
+
+inline int kth(int x){//找第k小,改一下也可以找第k大 
+	int u=root;
+		return 0; 
+	while(1){
+		int y = t[u].ch[0];//左儿子
+		if(x>t[y].size+t[u].cnt){//如果左儿子和当前点的size比要找的排名数小 
+			x-=t[y].size+t[u].cnt;//数量减少,相当于把这个寻找排名的起点变成了当前节点 
+			u=t[u].ch[1];//那么当前排名的数一定要往右儿子上找 
+		}
+		else if(t[y].size>=x) u=y;//左儿子的size足够,儿子在左侧上找 
+		else return t[u].val;//左儿子的size比x小,加上当前点u的size则比x大,说明第kA大的就是x 
+	}
+} 
+
+int main(){
+	tot=0;
+	read(n);
+    insert(+2147483647);insert(-2147483647);//博客作者在这里先加了正负INF
+    int typ,x;
+    while(n--){
+        read(typ);
+        if(typ==1){read(x);insert(x);}//插入 
+        else if(typ==2){read(x);Delete(x);}//删除 
+        else if(typ==3){//查找 
+			read(x);find(x);
+            printf("%d\n",t[t[root].ch[0]].size);
+        }
+        else if(typ==4){//第k小 
+            read(x);printf("%d\n",kth(x+1));//之前插进去正负INF,所以要+1; 
+        }
+        else if(typ==5){//前驱
+            read(x);printf("%d\n",t[Next(x,0)].val);
+        }
+        else if(typ==6){//后继 
+            read(x);printf("%d\n",t[Next(x,1)].val);
+        }
+    }
+    return 0;
+}
 \end{lstlisting}
 \subsubsection{文艺平衡树}
 处理区间翻转问题
@@ -3324,7 +3753,7 @@ int main(){
 }
 \end{lstlisting}
 
-\newpage
+ 
 
 \section{STL等小技巧}
 
