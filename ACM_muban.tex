@@ -397,7 +397,20 @@ void Exgcd(ll a,ll b,ll &d,ll &x,ll &y){
 	else{Exgcd(b,a%b,d,y,x);y-=x*(a/b);}
 }
 \end{lstlisting}
-
+非递归版
+\begin{lstlisting}
+int gcd(int a, int b, int& x, int& y) {
+    x = 1, y = 0;
+    int x1 = 0, y1 = 1, a1 = a, b1 = b;
+    while (b1) {
+      int q = a1 / b1;
+      tie(x, x1) = make_tuple(x1, x - q * x1);
+      tie(y, y1) = make_tuple(y1, y - q * y1);
+      tie(a1, b1) = make_tuple(b1, a1 - q * b1);
+    }
+    return a1;
+}
+\end{lstlisting}
 \subsection{Excrt 扩展中国剩余定理}
 \begin{center}
 	求解同余方程组
