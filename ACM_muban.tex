@@ -1321,6 +1321,36 @@ void tarjan(int u){
 
 \end{lstlisting}
 
+\subsection{边双/割边}
+\begin{lstlisting}
+//只需要把scc改成不能跳fa即可
+vector<int> G[N];
+int dccno[N],dfn[N],low[N],dcnt,tot;
+vector<pii> bridge;
+stack<int> S;
+void tarjan(int u,int fa){
+	dfn[u]=low[u]=++tot;
+	S.push(u);
+	for(auto v:G[u]){
+		if(dccno[v]||v==fa) continue;		
+		if(!dfn[v]){
+			tarjan(v,u);
+			low[u]=min(low[u],low[v]);
+		}
+		else low[u]=min(low[u],dfn[v]); //low[v] is also ok.
+	}
+	if(low[u]==dfn[u]){
+        if(fa) bridge.push_back({u,fa});
+		dcnt++;
+		int top=-1;
+		while(top!=u){
+			top=S.top(); S.pop();
+			dccno[top]=dcnt;
+		}
+	}
+}
+\end{lstlisting}
+
 \subsection{最小树形图}
 \begin{lstlisting}
 struct Edge{int u,v,w,b;};
