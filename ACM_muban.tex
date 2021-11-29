@@ -1900,7 +1900,30 @@ int main(){
 //洛谷CF600E Lomsat gelral
 //https://www.luogu.com.cn/problem/CF600E
 \end{lstlisting}
-
+\subsection{ST表求RMQ}
+$O(nlog_n)$预处理，$O(1)$查询
+\begin{lstlisting}
+#define log(x) (31-__builtin_clz(x))
+const int MAXN = 1e5+10;
+const int LOGN = log(MAXN)/log(2)+5;
+int M[MAXN][LOGN]; 
+int a[MAXN];
+int z,m,n;
+void init(){//初始化，复杂度O(nlogn) 
+	for(int i=1;i<=n;i++) M[i][0]=i;//长度为1的区间最值是自己 
+	for(int j=1;j<=LOGN;j++){
+		for(int i=1;i<=n-(1<<j)+1;i++){
+			if(a[M[i][j-1]]<a[M[i+(1<<(j-1))][j-1]]) M[i][j] = M[i][j-1];//这里以最小值为例 
+			else M[i][j] = M[i+(1<<j-1)][j-1];
+		}
+	} 
+}
+int query(int l,int r){
+	int k = log(r-l+1)/log(2);//向下取整
+	if(a[M[l][k]]<a[M[r-(1<<k)+1][k]]) return M[l][k];
+	else return M[r-(1<<k)+1][k];
+}
+\end{lstlisting}
 \subsection{扫描线}
 扫描线是离散化后，使用类似权值线段树来维护每个截面上的线段长度。\\
 通过把二维平面上的四边形拆分成入边和出边两段，在遇到边的时候对对应的区间进行区间加/减即可。\\
@@ -3678,35 +3701,6 @@ int main(){
 		cout<<c1[n]<<endl; 
 	} 
 } 
-\end{lstlisting}
-
-\subsection{ST表求RMQ}
-$O(nlog_n)$预处理，$O(1)$查询
-\begin{lstlisting}
-#define log(x) (31-__builtin_clz(x))
-const int MAXN = 1e5+10;
-const int LOGN = log(MAXN)/log(2)+5;
-int M[MAXN][LOGN]; 
-int a[MAXN];
-int z,m,n;
-void init(){//初始化，复杂度O(nlogn) 
-	for(int i=1;i<=n;i++) M[i][0]=i;//长度为1的区间最值是自己 
-	for(int j=1;j<=LOGN;j++){
-		for(int i=1;i<=n-(1<<j)+1;i++){
-			if(a[M[i][j-1]]<a[M[i+(1<<(j-1))][j-1]]) M[i][j] = M[i][j-1];//这里以最小值为例 
-			else M[i][j] = M[i+(1<<j-1)][j-1];
-		}
-	} 
-}
-int query(int l,int r){
-	int k = log(r-l+1)/log(2);//向下取整
-	if(a[M[l][k]]<a[M[r-(1<<k)+1][k]]) return M[l][k];
-	else return M[r-(1<<k)+1][k];
-}
-\end{lstlisting}
-
-\begin{lstlisting}
-
 \end{lstlisting}
 
 \subsection{CDQ分治三维偏序}
