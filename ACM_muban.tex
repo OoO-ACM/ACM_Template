@@ -672,6 +672,7 @@ Matrix qpow(Matrix d,ll m){//底数和幂次数
 \end{lstlisting}
 
 \subsection{高斯消元}
+\subsubsection{浮点}
 $O(n^3)$复杂度，需要用double存储。
 \begin{lstlisting}
 double date[110][110];
@@ -703,6 +704,61 @@ bool guass(int n){
 }
 \end{lstlisting}
 
+\subsubsection{质数取模}
+复杂度$O(n^3)$
+\begin{lstlisting}
+struct mat{
+	static const int N=410;
+	vector<ll> a[N];
+	mat(){for(auto &i:a)i.assign(N*2,0);} // if get_inv is needed, N*2
+	ll det;
+	void r_div(int x,int m,ll k){ // a[x][]/=k
+		ll r=qpow(k,mod-2);
+		repeat(i,0,m)
+			a[x][i]=a[x][i]*r%mod;
+		det=det*k%mod;
+	}
+	void r_plus(int x,int y,int m,ll k){ // a[x][]+=a[y][]*k
+		repeat(i,0,m)
+			a[x][i]=(a[x][i]+a[y][i]*k)%mod;
+	}
+	bool gauss(int n,int m){ // n<=m, return whether succuss
+		det=1;
+		repeat(i,0,n){
+			int t=-1;
+			repeat(j,i,n)if(a[j][i]){t=j; break;}
+			if(t==-1){det=0; return 0;}
+			if(t!=i){a[i].swap(a[t]); det=-det;}
+			r_div(i,m,a[i][i]);
+			repeat(j,0,n)
+			if(j!=i && a[j][i])
+				r_plus(j,i,m,mod-a[j][i]);
+		}
+		return 1;
+	}
+	ll get_det(int n){gauss(n,n); return (det+mod)%mod;} // return det
+	bool get_inv(int n){ // self=inv(self), return whether success
+		repeat(i,0,n)
+		repeat(j,0,n)
+			a[i][j+n]=(i==j);
+		bool t=gauss(n,n*2);
+		repeat(i,0,n)
+		repeat(j,0,n)
+			a[i][j]=a[i][j+n];
+		return t;
+	}
+	vector<ll> &operator[](int x){return a[x];}
+	const vector<ll> &operator[](int x)const{return a[x];}
+}a;
+\end{lstlisting}
+
+\subsubsection{非质数取模}
+复杂度$O(n^3 logC)$
+
+\subsection{矩阵求逆}
+求A的逆矩阵，把A和单位矩阵I放在一个矩阵里\par
+对A进行加减消元使A化成单位矩阵\par
+此时原来单位矩阵转化成逆矩阵
 \subsection{欧拉降幂}
 $$
 a^b \equiv \begin{cases}
@@ -741,7 +797,8 @@ inline ll get_yg(ll p){
     return -1;
 }
 \end{lstlisting}
- 
+
+
 \section{图论}
 \subsection{树上倍增求LCA}
 \begin{lstlisting}
@@ -2944,6 +3001,27 @@ struct KDT{
 \end{lstlisting}
 
 \section{字符串}
+
+\subsection{马拉车}
+求字符串的最长回文串的长度。
+\begin{lstlisting}
+int len[N*2]; char s[N*2]; // 两倍内存
+int manacher(char s1[]){ // s1可以是s
+	int n=strlen(s1)*2+1;
+	repeat_back(i,0,n)s[i+1]=(i%2==0?'*':s1[i/2]);
+	n++; s[0]='#'; s[n++]=0;
+	len[0]=0;
+	int mx=0,id=0,ans=0;
+	repeat(i,1,n-1){
+		if(i<mx)len[i]=min(mx-i,len[2*id-i]);
+		else len[i]=1;
+		while(s[i-len[i]]==s[i+len[i]])len[i]++;
+		if(len[i]+i>mx)mx=len[i]+i,id=i;
+		ans=max(ans,len[i]-1); // 最长回文串长度
+	}
+	return ans;
+}
+\end{lstlisting}
 
 \subsection{KMP}
 \begin{lstlisting}
