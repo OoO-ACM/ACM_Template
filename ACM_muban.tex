@@ -363,7 +363,19 @@ inline void solve(){
 }
 \end{lstlisting}
 
-\subsection{错排公式}
+\subsection{一些公式}
+\subsubsection{排列组合相关公式}
+化简可能有用\par
+$C_{n+1}^i = C_n^i + C_n^{i-1}$\par
+$m\cdot C_n^m = n\cdot C_{n-1}^{m-1}$\par
+$1C_n^1+2C_n^2+3C_n^3+\dots + nC_n^n = n2^{n-1}$\par
+$1^2C_n^1+2^2C_n^2+3^2C_n^3+\dots + n^2C_n^n = n(n+1)2^{n-2}$
+
+\subsubsection{数列求和相关公式}
+$\sum_{i=1}^{n} i^2 = \frac{n(n+1)(2n+1)}{6}$\par
+$\sum_{i=1}^{n} i^3 = \frac{n^2(n+1)^2}{4}$
+
+\subsubsection{错排公式}
 每个数字都不在自己位置上的排列数\par
 D(n) = (n-1) [D(n-2) + D(n-1)]\par
 特殊地，D(1) = 0, D(2) = 1.
