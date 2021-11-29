@@ -885,77 +885,6 @@ int main(){
     }
 }
 \end{lstlisting}
-\subsection{Tarjan}
-\begin{lstlisting}
-int n;
-vector<int> e[MAXN];//存图 
-int dfn[MAXN],low[MAXN];
-int dfncnt;//dfn自增下标 
-int s[MAXN],tp;//数组模拟栈,tp记录大小 
-bool in[MAXN];//记录该点是否在栈中 
-int scc[MAXN],sc;//节点i所在scc的编号,sc记录有几个强连通 
-int sz[MAXN];//强连通i的大小 
-int indg[MAXN];//记录缩点后的入度（这题才有的 
-
-void tarjan(int u){
-	low[u]=dfn[u]=++dfncnt;//low初始值为自身dfn
-	s[++tp]=u;//推u入栈，从1开始 
-	in[u]=1;//记录u点在栈中 
-	for(auto v:e[u]){//访问到新点的情况 
-		if(!dfn[v]){
-			tarjan(v);
-			low[u] = min(low[u],low[v]);//用low[v}更新low[u] 
-		}
-		else if(in[v])//v被访问过，但是在栈中 
-			low[u] = min(low[u],dfn[v]);
-	}
-	if(dfn[u]==low[u]){//u是连通分量的根节点
-		sc++;//强连通数量++
-		sz[sc] = 0; 
-		while(s[tp]!=u){//u和u之后的点全部出栈 
-			scc[s[tp]] = sc;//这个点包含于第几个强连通
-			sz[sc]++;//u为根的这个强连通的大小 
-			in[s[tp]] = 0;//出栈 
-			tp--; 
-		}
-		scc[u] = sc;//给根节点标，属于第sc个强连通 
-		sz[sc]++;
-		in[u] = 0;
-		tp--;
-	}
-} 
-
-void reset(){
-	tp = sc = dfncnt =0;
-	rep(i,1,n){
-		in[i] = dfn[i] = 0;//low不用清空，sz在之后用到再清空 
-		e[i].clear();
-	}
-}
-
-int main(){
-	cin>>n;
-	reset();
-	int v;
-	rep(u,1,n){
-		while(cin>>v&&v!=0) e[u].push_back(v);
-	} 
-	rep(u,1,n)
-		if(!dfn[u]) tarjan(u);
-	rep(i,1,sc) indg[i] = 0;//这个不包含在tarjan里面，是这题记录入度的 
-	rep(u,1,n){
-		for(auto v:e[u]){
-			if(scc[u]!=scc[v]) indg[scc[v]]++;
-		}
-	}
-	int res = 0;
-	rep(i,1,sc){
-		if(indg[i]==0) res++;
-	}
-	cout<<res<<endl;
-}
-\end{lstlisting}
-
 \subsection{拓扑排序}
 \begin{lstlisting}
 vector<int> e[MAXN];
@@ -1055,7 +984,7 @@ struct FLOW{
 void add(int x,int y,int w){flow.ae(x,y,w),flow.ae(y,x,0);}
 // 先flow.init(n)，再add添边，最后flow.solve(s,t)
 \end{lstlisting}
-
+\newpage
 \subsection{费用流}
 编号从0开始可用，复杂度 $O(VE^2)$
 \begin{lstlisting}
@@ -1208,8 +1137,8 @@ void dijkstra(int n,int pos){
     }
 }
 \end{lstlisting}
-
-\subsection{2-Sat}
+\newpage
+\subsection{2-SAT}
 \begin{lstlisting}
 //
 struct TwoSat{
@@ -1325,8 +1254,8 @@ void stable_marriage(int n){
 }
 
 \end{lstlisting}
-
-\subsection{点双连通分量}
+\subsection{Tarjan系列}
+\subsubsection{点双连通分量}
 \begin{lstlisting}
 vector<int> G[N],bcc[N];
 int pre[N]={0},low[N];
@@ -1368,8 +1297,9 @@ void dfs(int u,int fa){
 	if(fa==-1&&child==1) iscut[u]=0;
 
 \end{lstlisting}
+\newpage
 
-\subsection{强连通分量}
+\subsubsection{强连通分量}
 \begin{lstlisting}
 vector<int> G[N];
 int sccno[N],dfn[N],low[N],scnt,tot;
@@ -1397,7 +1327,7 @@ void tarjan(int u){
 
 \end{lstlisting}
 
-\subsection{边双/割边}
+\subsubsection{边双/割边}
 \begin{lstlisting}
 //只需要把scc改成不能跳fa即可
 vector<int> G[N];
@@ -1918,6 +1848,7 @@ int main(){
 //洛谷CF600E Lomsat gelral
 //https://www.luogu.com.cn/problem/CF600E
 \end{lstlisting}
+\newpage
 \subsection{ST表求RMQ}
 $O(nlog_n)$预处理，$O(1)$查询
 \begin{lstlisting}
@@ -2295,6 +2226,7 @@ void work()
     }
 }
 \end{lstlisting}
+\newpage
 \subsection{并查集系列}
 \subsubsection{普通并查集}
 带路径压缩,$O(1)$复杂度
@@ -2422,9 +2354,6 @@ struct DSU{
 	}
 }dsu;
 \end{lstlisting}
-
-\subsubsection{ETT维护动态图连通性}
-待补
 \subsection{平衡树系列}
 \subsubsection{fhq\_treap}
 无旋treap，可持久化，常数大
@@ -3107,7 +3036,7 @@ int manacher(char s1[]){ // s1可以是s
 	return ans;
 }
 \end{lstlisting}
-
+\newpage
 \subsection{KMP}
 \begin{lstlisting}
 const int MAXN = 2e6+5;
@@ -3211,7 +3140,7 @@ inline void solve(){
     }
 }
 \end{lstlisting}
-
+\newpage
 \subsection{FFT解决字符串匹配问题}
 可以用来解决含有通配符的字符串匹配问题
 定义匹配函数 $$(x,y) = (A_x-B_x)^2$$
@@ -4070,6 +3999,7 @@ struct VectorHash {
 };
 unordered_set<vector<int>,VectorHash> st;
 \end{lstlisting}
+\newpage
 \subsection{对拍}
 \subsubsection{linux\&mac版}
 \begin{lstlisting}
